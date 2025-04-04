@@ -1,0 +1,83 @@
+/* Mobile-specific styles */
+@media only screen and (max-width: 768px) {
+    /* Container to ensure proper centering and responsive layout */
+    .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem; /* Padding in rem for consistency */
+        width: 100%; /* Full width of the viewport */
+        box-sizing: border-box;
+    }
+
+    /* Styling the card for a clean look */
+    .scannerCard {
+        width: 100%; /* Full width */
+        max-width: 90vw; /* Max width relative to viewport width */
+        border-radius: 1rem; /* Rounded corners in rem */
+        box-shadow: 0 0.4rem 0.8rem rgba(0, 0, 0, 0.1); /* Subtle shadow */
+        background-color: #ffffff; /* White background */
+        padding: 2rem; /* Padding inside the card in rem units */
+        margin-bottom: 2rem; /* Space below the card in rem units */
+    }
+
+    /* Container for the content inside the card */
+    .contentContainer {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem; /* Space between elements in rem units */
+    }
+
+    /* Instructions text styling */
+    .instructions {
+        font-size: 1.2rem; /* Slightly larger font size for readability */
+        color: #333; /* Dark grey text color */
+        text-align: center; /* Center text for better alignment on mobile */
+    }
+
+    /* Button container styling */
+    .buttonContainer {
+        display: flex;
+        flex-direction: row; /* Arrange buttons horizontally */
+        gap: 0.8rem; /* Space between buttons in rem units */
+        width: 100%; /* Full width to accommodate buttons */
+        justify-content: center; /* Center align buttons horizontally */
+    }
+
+    /* Error text styling */
+    .errorText {
+        color: #d9534f; /* Red color for errors */
+        margin-top: 1rem; /* Space above the error text in rem units */
+        text-align: center; /* Center text for better alignment on mobile */
+    }
+
+    /* Result text styling */
+    .resultText {
+        font-size: 1rem; /* Standard font size */
+        color: #333; /* Dark grey text color */
+        margin-top: 1rem; /* Space above the result text in rem units */
+        text-align: center; /* Center text for better alignment on mobile */
+    }
+
+    /* Preview image container styling */
+    .previewDiv {
+        width: 100%; /* Full width */
+        max-width: 90vw; /* Max width relative to viewport width */
+        margin-top: 2rem; /* Space above the preview in rem units */
+    }
+
+    .imageContainer {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Preview image styling */
+    .previewImage {
+        max-width: 100%; /* Full width relative to container */
+        height: auto; /* Maintain aspect ratio */
+        border-radius: 0.8rem; /* Rounded corners in rem units */
+        box-shadow: 0 0.4rem 0.8rem rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    }
+}

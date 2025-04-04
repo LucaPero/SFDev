@@ -1,0 +1,71 @@
+<template>
+    <div class="container">
+        <lightning-card title="Document Scanner" icon-name="custom:display_text" class="scannerCard">
+            <!-- If there is a scanned document, display a preview -->
+            
+            <div if:false={scannedDocument} class="contentContainer">
+                <p class="instructions">Select the source of the document to be scanned:</p>
+                
+                <div class="buttonContainer">
+                    <lightning-button
+                        variant="brand"
+                        label="Camera"
+                        title="Capture document with camera"
+                        onclick={handleScanFromCameraClick}>
+                    </lightning-button>
+                    
+                    <lightning-button
+                        variant="brand"
+                        label="Photo Library"
+                        title="Scan document from photo library"
+                        onclick={handleScanFromPhotoLibraryClick}
+                        class="slds-var-m-left_x-small">
+                    </lightning-button>
+                </div>
+            </div>
+            <template if:true={scannedDocument}>
+                <div class="previewDiv">
+                    <div class="imageContainer">
+                        <img
+                            class="previewImage"
+                            src={scannedDocument.imageBytes}
+                            onload={addImageHighlights}
+                            alt="Scanned Document Image" />
+                    </div>
+                </div>
+            </template>
+
+            <!-- Display errors, if any -->
+            <template if:true={scannerError}>
+                <div class="errorText">
+                    <lightning-formatted-text value={scannerError}></lightning-formatted-text>
+                </div>
+            </template>
+
+            <!-- Display text of scanned document, if any -->
+            <template lwc:if={isWorkingOnResponse}>
+                <div class="resultText">
+                    <p>{response}</p>
+                    <lightning-spinner alternative-text="Processing" size="small"></lightning-spinner>
+                </div>
+            </template>
+            <template lwc:if={isTextGenerationCompleted}>
+                <div class="resultText">
+                    <h2><b>Category:</b></h2>
+                    <p>{response.category}</p><br>
+                    <h2><b>Summary:</b></h2>
+                    <p>{response.description}</p><br>
+                    <h2><b>Suggested actions:</b></h2>
+                    <ul>
+                        <template for:each={response.suggestedActions} for:item="action">
+                            <li key={action}>{action}</li>
+                        </template>
+                    </ul><br>
+                    <h2><b>Key Insights:</b></h2>
+                    <p>{response.keyInsights}</p>
+                </div>
+                <lightning-button class="slds-align_absolute-center slds-p-top_medium" variant="brand" label="Save File" onclick={handleSubmit}></lightning-button>
+            </template>
+        </lightning-card>
+    </div>
+</template>
