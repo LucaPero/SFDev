@@ -1,0 +1,30 @@
+{
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "caseId" : {
+      "title" : "Case Id",
+      "description" : "Id of the created or updated escalation Case.",
+      "lightning:type" : "lightning__recordIdType",
+      "lightning:isPII" : false,
+      "copilotAction:isDisplayable" : false,
+      "copilotAction:isUsedByPlanner" : false
+    },
+    "errorMessage" : {
+      "title" : "Error Message",
+      "description" : "Error message if the escalation failed.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isDisplayable" : false,
+      "copilotAction:isUsedByPlanner" : false
+    },
+    "isSuccess" : {
+      "title" : "Is Success",
+      "description" : "Whether the Case was created or updated successfully.",
+      "lightning:type" : "lightning__booleanType",
+      "lightning:isPII" : false,
+      "copilotAction:isDisplayable" : false,
+      "copilotAction:isUsedByPlanner" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>A short summary of what the user was trying to accomplish in the Ask Nimbus conversation, written by the escalation action so the receiving human agent doesn't have to reconstruct intent from the raw transcript.</description>
+    <fullName>Intent_Summary__c</fullName>
+    <inlineHelpText>Set automatically by the Ask Nimbus escalation action.</inlineHelpText>
+    <label>Intent Summary</label>
+    <length>4000</length>
+    <type>LongTextArea</type>
+    <visibleLines>5</visibleLines>
+</CustomField>

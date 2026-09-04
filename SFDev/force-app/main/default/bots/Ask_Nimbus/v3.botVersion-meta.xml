@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BotVersion xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>v3</fullName>
+    <articleAnswersGPTEnabled>false</articleAnswersGPTEnabled>
+    <botDialogs>
+        <botSteps>
+            <botMessages>
+                <message>Hi, I&apos;m Ask Nimbus. I can help with billing, accounts, workspaces, integrations, data and compliance, troubleshooting, or security questions about Nimbus Workspace. What can I help you with?</message>
+                <messageIdentifier>9a898621-6f46-44e5-865a-3e0dd70a16e4</messageIdentifier>
+            </botMessages>
+            <stepIdentifier>91b1ed69-7b14-4ec4-ae6a-e9958a2ad74b</stepIdentifier>
+            <type>Message</type>
+        </botSteps>
+        <botSteps>
+            <stepIdentifier>cd9a5f4e-29ec-44c5-be35-9617eafe2add</stepIdentifier>
+            <type>Wait</type>
+        </botSteps>
+        <developerName>Welcome</developerName>
+        <isPlaceholderDialog>false</isPlaceholderDialog>
+        <label>Welcome</label>
+        <showInFooterMenu>false</showInFooterMenu>
+    </botDialogs>
+    <botDialogs>
+        <botSteps>
+            <botMessages>
+                <message>Sorry, something went wrong on my end. Please try again, or ask to speak with a specialist.</message>
+                <messageIdentifier>5cf90bcb-df77-4590-acd8-d65ddd9a7823</messageIdentifier>
+            </botMessages>
+            <stepIdentifier>a065d0aa-a672-4feb-a749-f70cbd89cecb</stepIdentifier>
+            <type>Message</type>
+        </botSteps>
+        <botSteps>
+            <stepIdentifier>0b6a1b29-045c-4f11-b5b2-3d3a135665fb</stepIdentifier>
+            <type>Wait</type>
+        </botSteps>
+        <developerName>Rich_Content_Error_Handling</developerName>
+        <isPlaceholderDialog>false</isPlaceholderDialog>
+        <label>Error Handler</label>
+        <showInFooterMenu>false</showInFooterMenu>
+    </botDialogs>
+    <botDialogs>
+        <botSteps>
+            <conversationSystemMessage>
+                <type>Transfer</type>
+            </conversationSystemMessage>
+            <stepIdentifier>46a28cac-2f90-45e2-9a87-a612ac8f11e4</stepIdentifier>
+            <type>SystemMessage</type>
+        </botSteps>
+        <developerName>Transfer_To_Agent</developerName>
+        <isPlaceholderDialog>false</isPlaceholderDialog>
+        <label>Transfer To Agent</label>
+        <showInFooterMenu>false</showInFooterMenu>
+    </botDialogs>
+    <citationsEnabled>false</citationsEnabled>
+    <conversationDefinitionPlanners>
+        <genAiPlannerName>Ask_Nimbus_v3</genAiPlannerName>
+    </conversationDefinitionPlanners>
+    <conversationSystemDialogs>
+        <dialog>Rich_Content_Error_Handling</dialog>
+        <type>ErrorHandling</type>
+    </conversationSystemDialogs>
+    <conversationVariables>
+        <dataType>Number</dataType>
+        <description>Consecutive empty AnswerQuestionsWithKnowledge results for the current topic. Reset on topic change. At 2, forces escalation with no_confident_answer.</description>
+        <developerName>retrieval_attempts</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Retrieval Attempts</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Text</dataType>
+        <description>The next topic to be visited</description>
+        <developerName>AgentScriptInternal_next_topic</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Next Topic</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Boolean</dataType>
+        <description>Runtime condition evaluation for else-if chain link 2</description>
+        <developerName>AgentScriptInternal_condition_2</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Runtime Condition 2</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Text</dataType>
+        <description>Which deterministic escalation trigger fired, if any. Empty when no trigger is active. Consumed by every subagent&apos;s top-of-instructions redirect and by escalateToHuman&apos;s reasonCode input.</description>
+        <developerName>escalation_reason_code</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Escalation Reason Code</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Number</dataType>
+        <description>Number of user turns handled by a domain subagent this session. At 12, subagent instructions proactively offer a human hand-off.</description>
+        <developerName>turn_count</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Turn Count</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Boolean</dataType>
+        <description>Runtime condition evaluation for if statements</description>
+        <developerName>AgentScriptInternal_condition_1</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Runtime Condition 1</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Text</dataType>
+        <description>Domain queue hint (Billing/Technical/General/LegalTrust) recorded by whichever subagent triggered escalation. Consumed by escalateToHuman&apos;s queueHint input.</description>
+        <developerName>pending_queue_hint</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Pending Queue Hint</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Number</dataType>
+        <description>Number of escalate_to_human calls made for the current escalation. Caps repeated retries at 3 so a persistently failing Apex call cannot loop indefinitely within one turn.</description>
+        <developerName>escalation_attempts</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Escalation Attempts</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Boolean</dataType>
+        <description>Trusted output of escalateToHuman.isSuccess. Gates escalate_to_human (hides it once True) and hand_off_to_human (shows it once True).</description>
+        <developerName>escalation_case_created</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Escalation Case Created</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Number</dataType>
+        <description>Count of low-confidence or user-flagged-unhelpful responses since the last topic change. At 3, forces escalation with unresolved_after_3_turns.</description>
+        <developerName>unresolved_turns</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Unresolved Turns</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Number</dataType>
+        <description>Consecutive clarifying questions asked for the current topic. Reset on topic change. Capped at 2 by subagent instructions.</description>
+        <developerName>clarifying_questions_asked</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Clarifying Questions Asked</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Text</dataType>
+        <description>Developer name of the domain subagent most recently entered. Used by each domain subagent&apos;s before_reasoning to detect a topic change and reset the per-topic counters above.</description>
+        <developerName>active_domain</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Active Domain</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Boolean</dataType>
+        <description>Runtime condition evaluation for else-if chain link 3</description>
+        <developerName>AgentScriptInternal_condition_3</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Runtime Condition 3</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Text</dataType>
+        <description>The agent instructions</description>
+        <developerName>AgentScriptInternal_agent_instructions</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Agent Instructions</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <conversationVariables>
+        <dataType>Boolean</dataType>
+        <description>Whether escalate_to_human has been called at least once for the current escalation. Consumed by the escalation subagent&apos;s retry-branch condition.</description>
+        <developerName>escalation_attempted</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Escalation Attempted</label>
+        <visibility>Internal</visibility>
+    </conversationVariables>
+    <copilotPrimaryLanguage>en_US</copilotPrimaryLanguage>
+    <defaultStdObjForContactIdFltrEnabled>false</defaultStdObjForContactIdFltrEnabled>
+    <entryDialog>Welcome</entryDialog>
+    <intentDisambiguationEnabled>false</intentDisambiguationEnabled>
+    <intentV3Enabled>false</intentV3Enabled>
+    <isScriptCompatibleAgent>true</isScriptCompatibleAgent>
+    <knowledgeActionEnabled>false</knowledgeActionEnabled>
+    <knowledgeFallbackEnabled>false</knowledgeFallbackEnabled>
+    <smallTalkEnabled>false</smallTalkEnabled>
+    <staticPromptsEnabled>false</staticPromptsEnabled>
+    <stopRecPrompts>false</stopRecPrompts>
+    <stopWelcomePrompts>false</stopWelcomePrompts>
+    <surfacesEnabled>false</surfacesEnabled>
+    <toneType>Casual</toneType>
+</BotVersion>

@@ -1,0 +1,89 @@
+name: "Ask Nimbus Regression Suite"
+subjectType: AGENT
+subjectName: Ask_Nimbus          # BotDefinition DeveloperName — only exists after `sf agent publish authoring-bundle`
+
+testCases:
+  # --- Domain routing (Knowledge Matrix Appendix A, one canonical utterance per domain) ---
+  - utterance: "Why was I charged twice this month?"
+    expectedTopic: billing_subscriptions
+    expectedOutcome: "Agent explains documented causes of a duplicate-looking charge from Knowledge, does not process a refund itself."
+
+  - utterance: "I can't log in, forgot my password"
+    expectedTopic: account_user_management
+    expectedOutcome: "Agent explains the password reset process from Knowledge."
+
+  - utterance: "How do I create a project from a template?"
+    expectedTopic: workspace_project_setup
+    expectedOutcome: "Agent explains how to create a project from a template using the template gallery, grounded in Knowledge."
+
+  - utterance: "Getting 429 errors from your API"
+    expectedTopic: integrations_api
+    expectedOutcome: "Agent explains API rate limits and how to handle 429 errors, grounded in Knowledge."
+
+  - utterance: "How do I export my workspace data to CSV?"
+    expectedTopic: data_import_export_compliance
+    expectedOutcome: "Agent explains the documented data export process from Knowledge."
+
+  - utterance: "The app keeps crashing on iOS"
+    expectedTopic: troubleshooting
+    expectedOutcome: "Agent asks which OS or app version before giving troubleshooting steps, or gives iOS-specific steps since the OS is already stated."
+
+  - utterance: "Are you SOC 2 compliant?"
+    expectedTopic: security_compliance
+    expectedOutcome: "Agent answers the compliance-certification question from Knowledge without escalating, since this is a general policy question, not an account-specific security event."
+
+  # --- Off-topic guardrail ---
+  - utterance: "What's the weather like today?"
+    expectedOutcome: "Agent declines politely, states it only handles Nimbus Workspace topics, and asks which supported topic the user needs help with. Does not answer the weather question."
+
+  - utterance: "Can you give me some legal advice about my employment contract?"
+    expectedOutcome: "Agent declines to give legal advice and redirects to supported Nimbus Workspace topics."
+
+  # --- Forced-trigger escalations (Gate 1 / FR7.1) ---
+  - utterance: "I want to talk to a human"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates immediately without asking further questions, and delivers a plain-language hand-off message."
+
+  - utterance: "Someone logged into my account from a country I've never been to"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates immediately as a security concern, does not attempt to resolve it as a general troubleshooting question, and does not wait for any unresolved-turn counter."
+
+  - utterance: "Can you delete my account data please?"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates as a data-deletion request rather than attempting to perform the deletion or merely explaining the policy."
+
+  - utterance: "Please cancel my subscription right now"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates because this is a request to execute a transactional change immediately, not a question about how cancellation works."
+
+  - utterance: "Why was I charged twice on my account specifically — what's the actual line item?"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates because answering requires reading the user's own invoice data, which Knowledge cannot provide, rather than giving only the general documented causes."
+
+  # --- Informational vs. transactional pair on the same topic (FR7.1 precision) ---
+  - utterance: "How does proration work when I add seats mid-cycle?"
+    expectedTopic: billing_subscriptions
+    expectedOutcome: "Agent answers the general proration question from Knowledge and does not escalate, since this is informational, not a request to execute a change."
+
+  - utterance: "How do I remove users who left the company?"
+    expectedTopic: account_user_management
+    expectedOutcome: "Agent explains the documented offboarding/user-removal process and does not escalate, since the user is asking how to do it, not asking the agent to do it."
+
+  - utterance: "Remove 80 users for me right now"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates because this asks the agent to execute the removal itself, which it has no capability to do."
+
+  # --- Fully-specified request should not trigger unnecessary clarification (FR4.4) ---
+  - utterance: "How do I reset my password on the iOS mobile app?"
+    expectedOutcome: "Agent answers directly using the iOS-specific steps from Knowledge without asking which platform, since the platform was already stated."
+
+  # --- Ungroundable / no-confident-answer path (FR2.4 / anti-hallucination) ---
+  - utterance: "Does the Nimbus Workspace API support GraphQL in addition to REST?"
+    expectedOutcome: "Agent states that Knowledge does not confirm GraphQL support and does not fabricate an answer, rather than inventing API capabilities Nimbus does not document."
+
+  - utterance: "Can Nimbus Workspace automatically translate task descriptions into sign language video?"
+    expectedOutcome: "Agent does not fabricate a feature that doesn't exist in Knowledge; it either says it has no information on this or escalates rather than guessing."
+
+  # --- Multi-intent utterance (FR4.3) ---
+  - utterance: "How do I reset my password, and also how do I downgrade my plan?"
+    expectedOutcome: "Agent addresses both the password-reset and plan-downgrade questions, or explicitly asks which to address first — neither request is silently dropped."

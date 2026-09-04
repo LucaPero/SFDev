@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MessagingChannel xmlns="http://soap.sforce.com/2006/04/metadata">
+    <embeddedConfig>
+        <anonymousUserJwtExpirationTime>360</anonymousUserJwtExpirationTime>
+        <authMode>UnAuth</authMode>
+        <isAttachmentUploadEnabled>false</isAttachmentUploadEnabled>
+        <maxFileSize>5</maxFileSize>
+    </embeddedConfig>
+    <masterLabel>Ask Nimbus Web Channel</masterLabel>
+    <messagingChannelType>EmbeddedMessaging</messagingChannelType>
+    <sessionHandlerAsa>Ask_Nimbus</sessionHandlerAsa>
+    <sessionHandlerQueue>Messaging_Queue</sessionHandlerQueue>
+    <sessionHandlerType>AgentforceServiceAgent</sessionHandlerType>
+</MessagingChannel>

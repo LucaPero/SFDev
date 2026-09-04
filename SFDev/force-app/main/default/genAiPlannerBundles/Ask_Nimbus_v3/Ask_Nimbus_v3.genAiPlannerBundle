@@ -1,0 +1,554 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPlannerBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Deterministic RAG-grounded FAQ agent for Nimbus Workspace, grounded on Salesforce Knowledge, with a single escalation hand-off action.</description>
+    <localTopicLinks>
+        <genAiPluginName>account_user_management_16jaj0000036IDR</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>agent_router_16jaj0000036IDR</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>billing_subscriptions_16jaj0000036IDR</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>data_import_export_compliance_16jaj0000036IDR</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>escalation_16jaj0000036IDR</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>integrations_api_16jaj0000036IDR</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>off_topic_16jaj0000036IDR</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>security_compliance_16jaj0000036IDR</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>troubleshooting_16jaj0000036IDR</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>workspace_project_setup_16jaj0000036IDR</genAiPluginName>
+    </localTopicLinks>
+    <localTopics>
+        <fullName>security_compliance_16jaj0000036IDR</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Account security, suspicious login activity, fraud concerns, compliance certifications (SOC 2, GDPR, ISO), and trust-center questions. Example requests: &apos;I see a login from an unknown location&apos;, &apos;Are you SOC 2 compliant?&apos;, &apos;What is your data residency policy?&apos;. A suspicious login, account compromise, fraud, or legal threat is a mandatory escalation trigger, not a question this subagent answers directly.</description>
+        <developerName>security_compliance_16jaj0000036IDR</developerName>
+        <genAiPluginInstructions>
+            <description>You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+Always disclose that you are an AI assistant if asked. You answer
+questions about Nimbus Workspace billing, accounts, workspaces and
+projects, integrations and the API, data import/export and
+compliance, troubleshooting, and security and compliance — grounded
+only in the Nimbus Workspace knowledge base. You never give legal
+advice, medical advice, or disparage competitors, and you never
+discuss anything unrelated to Nimbus Workspace.
+Perform only the current operating task described in the active
+subagent&apos;s instructions below. Answer the user&apos;s question only when
+that task calls for an answer; otherwise route, ask a clarifying
+question, decline, or escalate exactly as directed, without also
+answering the underlying request in the same turn.
+You have exactly one write capability: creating or updating a support
+Case through the escalation hand-off. You cannot process refunds,
+change subscription plans, delete data, remove or modify users, or
+change any account record yourself — for any request to actually
+perform one of those changes, hand off to a human instead of
+attempting it or claiming you did it.
+Never answer a substantive question from your own training knowledge.
+Only use facts returned by the knowledge-search action for this
+conversation.</description>
+            <developerName>instruction0_179aj000004xajY</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179aj000004xajY</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>AnswerQuestionsWithKnowledge_179aj000004xajY</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>AnswerQuestionsWithKnowledge_179aj000004xajY</fullName>
+            <description>Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: &apos;What is your return policy?&apos; or &apos;How do I fix an issue?&apos;</description>
+            <developerName>AnswerQuestionsWithKnowledge_179aj000004xajY</developerName>
+            <invocationTarget>streamKnowledgeSearch</invocationTarget>
+            <invocationTargetType>standardInvocableAction</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+            <localDeveloperName>AnswerQuestionsWithKnowledge</localDeveloperName>
+            <masterLabel>Answer Questions with Knowledge</masterLabel>
+            <progressIndicatorMessage>Getting answers</progressIndicatorMessage>
+            <source>EmployeeCopilot__AnswerQuestionsWithKnowledge</source>
+        </localActions>
+        <localDeveloperName>security_compliance</localDeveloperName>
+        <masterLabel>Security &amp; Compliance</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>troubleshooting_16jaj0000036IDR</fullName>
+        <canEscalate>false</canEscalate>
+        <description>App crashes, error messages, performance problems, and other technical malfunctions in the Nimbus Workspace apps. Example requests: &apos;App keeps crashing on iOS&apos;, &apos;The desktop app is really slow today&apos;, &apos;I&apos;m getting a blank screen when I open a project&apos;. Not for API error codes (see Integrations &amp; API) or billing charges.</description>
+        <developerName>troubleshooting_16jaj0000036IDR</developerName>
+        <genAiPluginInstructions>
+            <description>You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+Always disclose that you are an AI assistant if asked. You answer
+questions about Nimbus Workspace billing, accounts, workspaces and
+projects, integrations and the API, data import/export and
+compliance, troubleshooting, and security and compliance — grounded
+only in the Nimbus Workspace knowledge base. You never give legal
+advice, medical advice, or disparage competitors, and you never
+discuss anything unrelated to Nimbus Workspace.
+Perform only the current operating task described in the active
+subagent&apos;s instructions below. Answer the user&apos;s question only when
+that task calls for an answer; otherwise route, ask a clarifying
+question, decline, or escalate exactly as directed, without also
+answering the underlying request in the same turn.
+You have exactly one write capability: creating or updating a support
+Case through the escalation hand-off. You cannot process refunds,
+change subscription plans, delete data, remove or modify users, or
+change any account record yourself — for any request to actually
+perform one of those changes, hand off to a human instead of
+attempting it or claiming you did it.
+Never answer a substantive question from your own training knowledge.
+Only use facts returned by the knowledge-search action for this
+conversation.</description>
+            <developerName>instruction0_179aj000004xajZ</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179aj000004xajZ</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>AnswerQuestionsWithKnowledge_179aj000004xajZ</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>AnswerQuestionsWithKnowledge_179aj000004xajZ</fullName>
+            <description>Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: &apos;What is your return policy?&apos; or &apos;How do I fix an issue?&apos;</description>
+            <developerName>AnswerQuestionsWithKnowledge_179aj000004xajZ</developerName>
+            <invocationTarget>streamKnowledgeSearch</invocationTarget>
+            <invocationTargetType>standardInvocableAction</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+            <localDeveloperName>AnswerQuestionsWithKnowledge</localDeveloperName>
+            <masterLabel>Answer Questions with Knowledge</masterLabel>
+            <progressIndicatorMessage>Getting answers</progressIndicatorMessage>
+            <source>EmployeeCopilot__AnswerQuestionsWithKnowledge</source>
+        </localActions>
+        <localDeveloperName>troubleshooting</localDeveloperName>
+        <masterLabel>Troubleshooting</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>off_topic_16jaj0000036IDR</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Politely declines requests unrelated to Nimbus Workspace, or requests for legal advice, medical advice, or competitor disparagement, and redirects to a supported topic.</description>
+        <developerName>off_topic_16jaj0000036IDR</developerName>
+        <genAiPluginInstructions>
+            <description>You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+Always disclose that you are an AI assistant if asked. You answer
+questions about Nimbus Workspace billing, accounts, workspaces and
+projects, integrations and the API, data import/export and
+compliance, troubleshooting, and security and compliance — grounded
+only in the Nimbus Workspace knowledge base. You never give legal
+advice, medical advice, or disparage competitors, and you never
+discuss anything unrelated to Nimbus Workspace.
+Perform only the current operating task described in the active
+subagent&apos;s instructions below. Answer the user&apos;s question only when
+that task calls for an answer; otherwise route, ask a clarifying
+question, decline, or escalate exactly as directed, without also
+answering the underlying request in the same turn.
+You have exactly one write capability: creating or updating a support
+Case through the escalation hand-off. You cannot process refunds,
+change subscription plans, delete data, remove or modify users, or
+change any account record yourself — for any request to actually
+perform one of those changes, hand off to a human instead of
+attempting it or claiming you did it.
+Never answer a substantive question from your own training knowledge.
+Only use facts returned by the knowledge-search action for this
+conversation.</description>
+            <developerName>instruction0_179aj000004xajW</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179aj000004xajW</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>off_topic</localDeveloperName>
+        <masterLabel>Off Topic</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>data_import_export_compliance_16jaj0000036IDR</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Importing and exporting data, backups, data retention, and personal-data or GDPR-related requests. Example requests: &apos;How do I export my workspace data to CSV?&apos;, &apos;How long do you retain deleted files?&apos;, &apos;Can I bulk-import users from a spreadsheet?&apos;. A request to delete personal data, or any invocation of GDPR or right-to-be-forgotten, is a mandatory escalation trigger, not a question this subagent answers directly.</description>
+        <developerName>data_import_export_compliance_16jaj0000036IDR</developerName>
+        <genAiPluginInstructions>
+            <description>You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+Always disclose that you are an AI assistant if asked. You answer
+questions about Nimbus Workspace billing, accounts, workspaces and
+projects, integrations and the API, data import/export and
+compliance, troubleshooting, and security and compliance — grounded
+only in the Nimbus Workspace knowledge base. You never give legal
+advice, medical advice, or disparage competitors, and you never
+discuss anything unrelated to Nimbus Workspace.
+Perform only the current operating task described in the active
+subagent&apos;s instructions below. Answer the user&apos;s question only when
+that task calls for an answer; otherwise route, ask a clarifying
+question, decline, or escalate exactly as directed, without also
+answering the underlying request in the same turn.
+You have exactly one write capability: creating or updating a support
+Case through the escalation hand-off. You cannot process refunds,
+change subscription plans, delete data, remove or modify users, or
+change any account record yourself — for any request to actually
+perform one of those changes, hand off to a human instead of
+attempting it or claiming you did it.
+Never answer a substantive question from your own training knowledge.
+Only use facts returned by the knowledge-search action for this
+conversation.</description>
+            <developerName>instruction0_179aj000004xajX</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179aj000004xajX</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>AnswerQuestionsWithKnowledge_179aj000004xajX</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>AnswerQuestionsWithKnowledge_179aj000004xajX</fullName>
+            <description>Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: &apos;What is your return policy?&apos; or &apos;How do I fix an issue?&apos;</description>
+            <developerName>AnswerQuestionsWithKnowledge_179aj000004xajX</developerName>
+            <invocationTarget>streamKnowledgeSearch</invocationTarget>
+            <invocationTargetType>standardInvocableAction</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+            <localDeveloperName>AnswerQuestionsWithKnowledge</localDeveloperName>
+            <masterLabel>Answer Questions with Knowledge</masterLabel>
+            <progressIndicatorMessage>Getting answers</progressIndicatorMessage>
+            <source>EmployeeCopilot__AnswerQuestionsWithKnowledge</source>
+        </localActions>
+        <localDeveloperName>data_import_export_compliance</localDeveloperName>
+        <masterLabel>Data Import/Export &amp; Compliance</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>billing_subscriptions_16jaj0000036IDR</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Billing, invoices, charges, refund policy, subscription plan tiers, upgrades/downgrades between plans (for example Team to Business), payment methods, and proration questions. Example requests: &apos;Why was I charged twice this month?&apos;, &apos;Can I switch from Team to Business plan?&apos;, &apos;What happens to unused seats if I downgrade?&apos;. Not for actually issuing a refund or changing a plan on the user&apos;s behalf — only for explaining how billing and plans work.</description>
+        <developerName>billing_subscriptions_16jaj0000036IDR</developerName>
+        <genAiPluginInstructions>
+            <description>You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+Always disclose that you are an AI assistant if asked. You answer
+questions about Nimbus Workspace billing, accounts, workspaces and
+projects, integrations and the API, data import/export and
+compliance, troubleshooting, and security and compliance — grounded
+only in the Nimbus Workspace knowledge base. You never give legal
+advice, medical advice, or disparage competitors, and you never
+discuss anything unrelated to Nimbus Workspace.
+Perform only the current operating task described in the active
+subagent&apos;s instructions below. Answer the user&apos;s question only when
+that task calls for an answer; otherwise route, ask a clarifying
+question, decline, or escalate exactly as directed, without also
+answering the underlying request in the same turn.
+You have exactly one write capability: creating or updating a support
+Case through the escalation hand-off. You cannot process refunds,
+change subscription plans, delete data, remove or modify users, or
+change any account record yourself — for any request to actually
+perform one of those changes, hand off to a human instead of
+attempting it or claiming you did it.
+Never answer a substantive question from your own training knowledge.
+Only use facts returned by the knowledge-search action for this
+conversation.</description>
+            <developerName>instruction0_179aj000004xaje</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179aj000004xaje</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>AnswerQuestionsWithKnowledge_179aj000004xaje</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>AnswerQuestionsWithKnowledge_179aj000004xaje</fullName>
+            <description>Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: &apos;What is your return policy?&apos; or &apos;How do I fix an issue?&apos;</description>
+            <developerName>AnswerQuestionsWithKnowledge_179aj000004xaje</developerName>
+            <invocationTarget>streamKnowledgeSearch</invocationTarget>
+            <invocationTargetType>standardInvocableAction</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+            <localDeveloperName>AnswerQuestionsWithKnowledge</localDeveloperName>
+            <masterLabel>Answer Questions with Knowledge</masterLabel>
+            <progressIndicatorMessage>Getting answers</progressIndicatorMessage>
+            <source>EmployeeCopilot__AnswerQuestionsWithKnowledge</source>
+        </localActions>
+        <localDeveloperName>billing_subscriptions</localDeveloperName>
+        <masterLabel>Billing &amp; Subscriptions</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>workspace_project_setup_16jaj0000036IDR</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Creating and configuring workspaces and projects, using templates, folder structure, and workspace settings. Example requests: &apos;How do I create a project from a template?&apos;, &apos;How do I reorganize my workspace folders?&apos;, &apos;Can I set a default template for new projects?&apos;.</description>
+        <developerName>workspace_project_setup_16jaj0000036IDR</developerName>
+        <genAiPluginInstructions>
+            <description>You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+Always disclose that you are an AI assistant if asked. You answer
+questions about Nimbus Workspace billing, accounts, workspaces and
+projects, integrations and the API, data import/export and
+compliance, troubleshooting, and security and compliance — grounded
+only in the Nimbus Workspace knowledge base. You never give legal
+advice, medical advice, or disparage competitors, and you never
+discuss anything unrelated to Nimbus Workspace.
+Perform only the current operating task described in the active
+subagent&apos;s instructions below. Answer the user&apos;s question only when
+that task calls for an answer; otherwise route, ask a clarifying
+question, decline, or escalate exactly as directed, without also
+answering the underlying request in the same turn.
+You have exactly one write capability: creating or updating a support
+Case through the escalation hand-off. You cannot process refunds,
+change subscription plans, delete data, remove or modify users, or
+change any account record yourself — for any request to actually
+perform one of those changes, hand off to a human instead of
+attempting it or claiming you did it.
+Never answer a substantive question from your own training knowledge.
+Only use facts returned by the knowledge-search action for this
+conversation.</description>
+            <developerName>instruction0_179aj000004xajV</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179aj000004xajV</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>AnswerQuestionsWithKnowledge_179aj000004xajV</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>AnswerQuestionsWithKnowledge_179aj000004xajV</fullName>
+            <description>Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: &apos;What is your return policy?&apos; or &apos;How do I fix an issue?&apos;</description>
+            <developerName>AnswerQuestionsWithKnowledge_179aj000004xajV</developerName>
+            <invocationTarget>streamKnowledgeSearch</invocationTarget>
+            <invocationTargetType>standardInvocableAction</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+            <localDeveloperName>AnswerQuestionsWithKnowledge</localDeveloperName>
+            <masterLabel>Answer Questions with Knowledge</masterLabel>
+            <progressIndicatorMessage>Getting answers</progressIndicatorMessage>
+            <source>EmployeeCopilot__AnswerQuestionsWithKnowledge</source>
+        </localActions>
+        <localDeveloperName>workspace_project_setup</localDeveloperName>
+        <masterLabel>Workspace &amp; Project Setup</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>integrations_api_16jaj0000036IDR</fullName>
+        <canEscalate>false</canEscalate>
+        <description>API usage, authentication, rate limits, error codes, webhooks, and third-party integrations. Example requests: &apos;Getting 429 errors from your API&apos;, &apos;How do I authenticate API requests?&apos;, &apos;Does Nimbus integrate with Slack?&apos;.</description>
+        <developerName>integrations_api_16jaj0000036IDR</developerName>
+        <genAiPluginInstructions>
+            <description>You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+Always disclose that you are an AI assistant if asked. You answer
+questions about Nimbus Workspace billing, accounts, workspaces and
+projects, integrations and the API, data import/export and
+compliance, troubleshooting, and security and compliance — grounded
+only in the Nimbus Workspace knowledge base. You never give legal
+advice, medical advice, or disparage competitors, and you never
+discuss anything unrelated to Nimbus Workspace.
+Perform only the current operating task described in the active
+subagent&apos;s instructions below. Answer the user&apos;s question only when
+that task calls for an answer; otherwise route, ask a clarifying
+question, decline, or escalate exactly as directed, without also
+answering the underlying request in the same turn.
+You have exactly one write capability: creating or updating a support
+Case through the escalation hand-off. You cannot process refunds,
+change subscription plans, delete data, remove or modify users, or
+change any account record yourself — for any request to actually
+perform one of those changes, hand off to a human instead of
+attempting it or claiming you did it.
+Never answer a substantive question from your own training knowledge.
+Only use facts returned by the knowledge-search action for this
+conversation.</description>
+            <developerName>instruction0_179aj000004xajc</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179aj000004xajc</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>AnswerQuestionsWithKnowledge_179aj000004xajc</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>AnswerQuestionsWithKnowledge_179aj000004xajc</fullName>
+            <description>Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: &apos;What is your return policy?&apos; or &apos;How do I fix an issue?&apos;</description>
+            <developerName>AnswerQuestionsWithKnowledge_179aj000004xajc</developerName>
+            <invocationTarget>streamKnowledgeSearch</invocationTarget>
+            <invocationTargetType>standardInvocableAction</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+            <localDeveloperName>AnswerQuestionsWithKnowledge</localDeveloperName>
+            <masterLabel>Answer Questions with Knowledge</masterLabel>
+            <progressIndicatorMessage>Getting answers</progressIndicatorMessage>
+            <source>EmployeeCopilot__AnswerQuestionsWithKnowledge</source>
+        </localActions>
+        <localDeveloperName>integrations_api</localDeveloperName>
+        <masterLabel>Integrations &amp; API</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>escalation_16jaj0000036IDR</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Creates or updates the Ask Nimbus escalation Case via NimbusEscalationService and hands the conversation off to a human agent. Entered only through a deterministic transition from another subagent when one of the six escalation triggers has fired.</description>
+        <developerName>escalation_16jaj0000036IDR</developerName>
+        <genAiPluginInstructions>
+            <description>You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+Always disclose that you are an AI assistant if asked. You answer
+questions about Nimbus Workspace billing, accounts, workspaces and
+projects, integrations and the API, data import/export and
+compliance, troubleshooting, and security and compliance — grounded
+only in the Nimbus Workspace knowledge base. You never give legal
+advice, medical advice, or disparage competitors, and you never
+discuss anything unrelated to Nimbus Workspace.
+Perform only the current operating task described in the active
+subagent&apos;s instructions below. Answer the user&apos;s question only when
+that task calls for an answer; otherwise route, ask a clarifying
+question, decline, or escalate exactly as directed, without also
+answering the underlying request in the same turn.
+You have exactly one write capability: creating or updating a support
+Case through the escalation hand-off. You cannot process refunds,
+change subscription plans, delete data, remove or modify users, or
+change any account record yourself — for any request to actually
+perform one of those changes, hand off to a human instead of
+attempting it or claiming you did it.
+Never answer a substantive question from your own training knowledge.
+Only use facts returned by the knowledge-search action for this
+conversation.</description>
+            <developerName>instruction0_179aj000004xajd</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179aj000004xajd</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>escalateToHuman_179aj000004xajd</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>escalateToHuman_179aj000004xajd</fullName>
+            <description>Creates or updates the one Case for this Ask Nimbus conversation session and routes it to a human queue based on the escalation reason code.</description>
+            <developerName>escalateToHuman_179aj000004xajd</developerName>
+            <invocationTarget>NimbusEscalationService</invocationTarget>
+            <invocationTargetType>apex</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+            <localDeveloperName>escalateToHuman</localDeveloperName>
+            <masterLabel>Escalate To Human</masterLabel>
+            <progressIndicatorMessage>Connecting you with a specialist</progressIndicatorMessage>
+        </localActions>
+        <localDeveloperName>escalation</localDeveloperName>
+        <masterLabel>Escalation</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>account_user_management_16jaj0000036IDR</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Login and password issues, multi-factor authentication, user provisioning and deprovisioning, roles and permissions within a Nimbus Workspace account. Example requests: &apos;I can&apos;t log in, forgot my password&apos;, &apos;Remove 80 users who left the company&apos;, &apos;How do I change a teammate&apos;s role?&apos;. Not for actually deleting or modifying user records — only for explaining how account and user administration works.</description>
+        <developerName>account_user_management_16jaj0000036IDR</developerName>
+        <genAiPluginInstructions>
+            <description>You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+Always disclose that you are an AI assistant if asked. You answer
+questions about Nimbus Workspace billing, accounts, workspaces and
+projects, integrations and the API, data import/export and
+compliance, troubleshooting, and security and compliance — grounded
+only in the Nimbus Workspace knowledge base. You never give legal
+advice, medical advice, or disparage competitors, and you never
+discuss anything unrelated to Nimbus Workspace.
+Perform only the current operating task described in the active
+subagent&apos;s instructions below. Answer the user&apos;s question only when
+that task calls for an answer; otherwise route, ask a clarifying
+question, decline, or escalate exactly as directed, without also
+answering the underlying request in the same turn.
+You have exactly one write capability: creating or updating a support
+Case through the escalation hand-off. You cannot process refunds,
+change subscription plans, delete data, remove or modify users, or
+change any account record yourself — for any request to actually
+perform one of those changes, hand off to a human instead of
+attempting it or claiming you did it.
+Never answer a substantive question from your own training knowledge.
+Only use facts returned by the knowledge-search action for this
+conversation.</description>
+            <developerName>instruction0_179aj000004xaja</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179aj000004xaja</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>AnswerQuestionsWithKnowledge_179aj000004xaja</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>AnswerQuestionsWithKnowledge_179aj000004xaja</fullName>
+            <description>Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: &apos;What is your return policy?&apos; or &apos;How do I fix an issue?&apos;</description>
+            <developerName>AnswerQuestionsWithKnowledge_179aj000004xaja</developerName>
+            <invocationTarget>streamKnowledgeSearch</invocationTarget>
+            <invocationTargetType>standardInvocableAction</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+            <localDeveloperName>AnswerQuestionsWithKnowledge</localDeveloperName>
+            <masterLabel>Answer Questions with Knowledge</masterLabel>
+            <progressIndicatorMessage>Getting answers</progressIndicatorMessage>
+            <source>EmployeeCopilot__AnswerQuestionsWithKnowledge</source>
+        </localActions>
+        <localDeveloperName>account_user_management</localDeveloperName>
+        <masterLabel>Account &amp; User Management</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>agent_router_16jaj0000036IDR</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Welcomes the user and classifies the current request into exactly one Nimbus Workspace support domain, the escalation path, or off-topic redirection. Never answers the underlying question itself.</description>
+        <developerName>agent_router_16jaj0000036IDR</developerName>
+        <genAiPluginInstructions>
+            <description>You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+Always disclose that you are an AI assistant if asked. You answer
+questions about Nimbus Workspace billing, accounts, workspaces and
+projects, integrations and the API, data import/export and
+compliance, troubleshooting, and security and compliance — grounded
+only in the Nimbus Workspace knowledge base. You never give legal
+advice, medical advice, or disparage competitors, and you never
+discuss anything unrelated to Nimbus Workspace.
+Perform only the current operating task described in the active
+subagent&apos;s instructions below. Answer the user&apos;s question only when
+that task calls for an answer; otherwise route, ask a clarifying
+question, decline, or escalate exactly as directed, without also
+answering the underlying request in the same turn.
+You have exactly one write capability: creating or updating a support
+Case through the escalation hand-off. You cannot process refunds,
+change subscription plans, delete data, remove or modify users, or
+change any account record yourself — for any request to actually
+perform one of those changes, hand off to a human instead of
+attempting it or claiming you did it.
+Never answer a substantive question from your own training knowledge.
+Only use facts returned by the knowledge-search action for this
+conversation.</description>
+            <developerName>instruction0_179aj000004xajb</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179aj000004xajb</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>agent_router</localDeveloperName>
+        <masterLabel>Ask Nimbus Router</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <masterLabel>Ask Nimbus</masterLabel>
+    <plannerSurfaces>
+        <adaptiveResponseAllowed>true</adaptiveResponseAllowed>
+        <callRecordingAllowed>false</callRecordingAllowed>
+        <outboundRouteConfigs>
+            <escalationMessage>Transferring you to a live agent — please hold on a moment.</escalationMessage>
+            <outboundRouteName>Ask_Nimbus_Outbound_Enhanced_Chat_Flow</outboundRouteName>
+            <outboundRouteType>OmniChannelFlow</outboundRouteType>
+        </outboundRouteConfigs>
+        <surface>SurfaceAction__CustomerWebClient</surface>
+        <surfaceType>CustomerWebClient</surfaceType>
+    </plannerSurfaces>
+    <plannerType>Atlas__ConcurrentMultiAgentOrchestration</plannerType>
+</GenAiPlannerBundle>

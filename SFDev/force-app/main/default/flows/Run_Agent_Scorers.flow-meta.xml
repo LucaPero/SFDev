@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>67.0</apiVersion>
+    <description>Retroactively runs Agentforce scorers over agent sessions that have already completed, via the standard triggerAgentBulkScoring action. If no scorers are supplied, the three custom Lead Insights scorers are used.</description>
+    <environments>Default</environments>
+    <interviewLabel>Run Agent Scorers {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Run Agent Scorers</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>176</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Scorers_Provided</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+
+    <decisions>
+        <name>Scorers_Provided</name>
+        <label>Scorers Provided?</label>
+        <locationX>176</locationX>
+        <locationY>134</locationY>
+        <defaultConnector>
+            <targetReference>Set_Default_Scorers</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>No - Use Defaults</defaultConnectorLabel>
+        <rules>
+            <name>Has_Scorers</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>varScorerApiNames</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Trigger_Bulk_Scoring</targetReference>
+            </connector>
+            <label>Yes</label>
+        </rules>
+    </decisions>
+
+    <assignments>
+        <name>Set_Default_Scorers</name>
+        <label>Set Default Scorers</label>
+        <locationX>50</locationX>
+        <locationY>254</locationY>
+        <assignmentItems>
+            <assignToReference>varScorerApiNames</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <stringValue>Field_Completeness</stringValue>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>varScorerApiNames</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <stringValue>Friction_Eval_Lead_Insight_Agent</stringValue>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>varScorerApiNames</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <stringValue>Lead_Insight_Multi_Dimensions_Eval</stringValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Trigger_Bulk_Scoring</targetReference>
+        </connector>
+    </assignments>
+
+    <actionCalls>
+        <name>Trigger_Bulk_Scoring</name>
+        <label>Trigger Agent Bulk Scoring</label>
+        <locationX>176</locationX>
+        <locationY>374</locationY>
+        <actionName>triggerAgentBulkScoring</actionName>
+        <actionType>triggerAgentBulkScoring</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>inputScope</name>
+            <value>
+                <elementReference>varInputScope</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>inputIds</name>
+            <value>
+                <elementReference>varInputIds</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>scorerApiNames</name>
+            <value>
+                <elementReference>varScorerApiNames</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>daysBack</name>
+            <value>
+                <elementReference>varDaysBack</elementReference>
+            </value>
+        </inputParameters>
+    </actionCalls>
+
+    <variables>
+        <name>varInputIds</name>
+        <dataType>String</dataType>
+        <description>Session (or intent) IDs to score. Max 500 per run.</description>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>varScorerApiNames</name>
+        <dataType>String</dataType>
+        <description>Scorer API names, max 10, all belonging to the same agent. Left empty, the three custom Lead Insights scorers are used.</description>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>varInputScope</name>
+        <dataType>String</dataType>
+        <description>Session or Intent. Only Session is currently supported by the platform.</description>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <value>
+            <stringValue>Session</stringValue>
+        </value>
+    </variables>
+    <variables>
+        <name>varDaysBack</name>
+        <dataType>Number</dataType>
+        <description>Lookback window for entity discovery, 1-180.</description>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <scale>0</scale>
+        <value>
+            <numberValue>90.0</numberValue>
+        </value>
+    </variables>
+</Flow>

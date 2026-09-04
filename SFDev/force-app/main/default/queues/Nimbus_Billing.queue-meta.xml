@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Queue xmlns="http://soap.sforce.com/2006/04/metadata">
+    <doesSendEmailToMembers>false</doesSendEmailToMembers>
+    <name>Nimbus Billing</name>
+    <queueMembers>
+        <users>
+            <user>lpero@agentforcetest.com</user>
+        </users>
+    </queueMembers>
+    <queueRoutingConfig>Nimbus_Case_Routing</queueRoutingConfig>
+    <queueSobject>
+        <sobjectType>Case</sobjectType>
+    </queueSobject>
+    <queueSobject>
+        <sobjectType>MessagingSession</sobjectType>
+    </queueSobject>
+</Queue>

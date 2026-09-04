@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bot xmlns="http://soap.sforce.com/2006/04/metadata">
+    <agentDSLEnabled>true</agentDSLEnabled>
+    <agentType>EinsteinServiceAgent</agentType>
+    <botMlDomain>
+        <label>Ask Nimbus</label>
+        <name>Ask_Nimbus</name>
+    </botMlDomain>
+    <botSource>None</botSource>
+    <botUser>agentforce_service_agent@00daj00000uvhm5802865891.ext</botUser>
+    <contextVariables>
+        <contextVariableMappings>
+            <SObjectType>MessagingSession</SObjectType>
+            <fieldName>MessagingSession.Id</fieldName>
+            <messageType>Email</messageType>
+        </contextVariableMappings>
+        <contextVariableMappings>
+            <SObjectType>MessagingSession</SObjectType>
+            <fieldName>MessagingSession.Id</fieldName>
+            <messageType>Facebook</messageType>
+        </contextVariableMappings>
+        <contextVariableMappings>
+            <SObjectType>MessagingSession</SObjectType>
+            <fieldName>MessagingSession.Id</fieldName>
+            <messageType>Line</messageType>
+        </contextVariableMappings>
+        <contextVariableMappings>
+            <SObjectType>MessagingSession</SObjectType>
+            <fieldName>MessagingSession.Id</fieldName>
+            <messageType>AppleBusinessChat</messageType>
+        </contextVariableMappings>
+        <contextVariableMappings>
+            <SObjectType>MessagingSession</SObjectType>
+            <fieldName>MessagingSession.Id</fieldName>
+            <messageType>Custom</messageType>
+        </contextVariableMappings>
+        <contextVariableMappings>
+            <SObjectType>MessagingSession</SObjectType>
+            <fieldName>MessagingSession.Id</fieldName>
+            <messageType>Text</messageType>
+        </contextVariableMappings>
+        <contextVariableMappings>
+            <SObjectType>MessagingSession</SObjectType>
+            <fieldName>MessagingSession.Id</fieldName>
+            <messageType>WhatsApp</messageType>
+        </contextVariableMappings>
+        <contextVariableMappings>
+            <SObjectType>MessagingSession</SObjectType>
+            <fieldName>MessagingSession.Id</fieldName>
+            <messageType>EmbeddedMessaging</messageType>
+        </contextVariableMappings>
+        <dataType>Text</dataType>
+        <description>Current conversation session id. Idempotency key passed to escalateToHuman as sessionId.</description>
+        <developerName>session_id</developerName>
+        <includeInPrompt>false</includeInPrompt>
+        <label>Session Id</label>
+    </contextVariables>
+    <description>Deterministic RAG-grounded FAQ agent for Nimbus Workspace, grounded on Salesforce Knowledge, with a single escalation hand-off action.</description>
+    <label>Ask Nimbus</label>
+    <logPrivateConversationData>false</logPrivateConversationData>
+    <richContentEnabled>true</richContentEnabled>
+    <sessionTimeout>0</sessionTimeout>
+    <type>ExternalCopilot</type>
+</Bot>

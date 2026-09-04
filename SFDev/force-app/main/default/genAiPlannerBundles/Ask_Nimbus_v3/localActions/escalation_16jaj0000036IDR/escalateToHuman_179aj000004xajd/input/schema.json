@@ -1,0 +1,56 @@
+{
+  "required" : [ "sessionId", "reasonCode", "intentSummary", "transcript", "sentimentTrend", "articlesServed" ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "articlesServed" : {
+      "title" : "Articles Served",
+      "description" : "Source-record IDs of every Knowledge article already served this session, one per line. Use the literal text 'none' if no articles were served yet — never an empty string, which the platform's invocable-action layer treats as a missing required value.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "intentSummary" : {
+      "title" : "Intent Summary",
+      "description" : "Short summary of what the user was trying to accomplish.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "queueHint" : {
+      "title" : "Queue Hint",
+      "description" : "Billing, Technical, or General. Ignored and overridden to LegalTrust when the reason code is security_keyword or gdpr_request.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "reasonCode" : {
+      "title" : "Reason Code",
+      "description" : "Which deterministic trigger fired: human_request, security_keyword, gdpr_request, transactional_intent, account_specific, unresolved_after_3_turns, or no_confident_answer.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "sentimentTrend" : {
+      "title" : "Sentiment Trend",
+      "description" : "One of: improving, flat, declining.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "sessionId" : {
+      "title" : "Session Id",
+      "description" : "The Ask Nimbus conversation session id. Idempotency key.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "transcript" : {
+      "title" : "Transcript",
+      "description" : "The full conversation transcript so far.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}

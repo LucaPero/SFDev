@@ -1,0 +1,1412 @@
+# Ask Nimbus — deterministic RAG-grounded FAQ agent for Nimbus Workspace.
+# See Ask_Nimbus-AgentSpec.md at the project root for full design rationale.
+
+system:
+    instructions: |
+        You are Ask Nimbus, an AI assistant for Nimbus Workspace customers.
+        Always disclose that you are an AI assistant if asked. You answer
+        questions about Nimbus Workspace billing, accounts, workspaces and
+        projects, integrations and the API, data import/export and
+        compliance, troubleshooting, and security and compliance — grounded
+        only in the Nimbus Workspace knowledge base. You never give legal
+        advice, medical advice, or disparage competitors, and you never
+        discuss anything unrelated to Nimbus Workspace.
+        Perform only the current operating task described in the active
+        subagent's instructions below. Answer the user's question only when
+        that task calls for an answer; otherwise route, ask a clarifying
+        question, decline, or escalate exactly as directed, without also
+        answering the underlying request in the same turn.
+        You have exactly one write capability: creating or updating a support
+        Case through the escalation hand-off. You cannot process refunds,
+        change subscription plans, delete data, remove or modify users, or
+        change any account record yourself — for any request to actually
+        perform one of those changes, hand off to a human instead of
+        attempting it or claiming you did it.
+        Never answer a substantive question from your own training knowledge.
+        Only use facts returned by the knowledge-search action for this
+        conversation.
+    messages:
+        welcome: "Hi, I'm Ask Nimbus. I can help with billing, accounts, workspaces, integrations, data and compliance, troubleshooting, or security questions about Nimbus Workspace. What can I help you with?"
+        error: "Sorry, something went wrong on my end. Please try again, or ask to speak with a specialist."
+
+access:
+    default_agent_user: "agentforce_service_agent@00daj00000uvhm5802865891.ext"
+
+config:
+    developer_name: "Ask_Nimbus"
+    agent_label: "Ask Nimbus"
+    description: "Deterministic RAG-grounded FAQ agent for Nimbus Workspace, grounded on Salesforce Knowledge, with a single escalation hand-off action."
+    agent_type: "AgentforceServiceAgent"
+
+variables:
+    session_id: linked string
+        source: @MessagingSession.Id
+        description: "Current conversation session id. Idempotency key passed to escalateToHuman as sessionId."
+
+    escalation_reason_code: mutable string = ""
+        description: "Which deterministic escalation trigger fired, if any. Empty when no trigger is active. Consumed by every subagent's top-of-instructions redirect and by escalateToHuman's reasonCode input."
+
+    pending_queue_hint: mutable string = ""
+        description: "Domain queue hint (Billing/Technical/General/LegalTrust) recorded by whichever subagent triggered escalation. Consumed by escalateToHuman's queueHint input."
+
+    retrieval_attempts: mutable number = 0
+        description: "Consecutive empty AnswerQuestionsWithKnowledge results for the current topic. Reset on topic change. At 2, forces escalation with no_confident_answer."
+
+    unresolved_turns: mutable number = 0
+        description: "Count of low-confidence or user-flagged-unhelpful responses since the last topic change. At 3, forces escalation with unresolved_after_3_turns."
+
+    clarifying_questions_asked: mutable number = 0
+        description: "Consecutive clarifying questions asked for the current topic. Reset on topic change. Capped at 2 by subagent instructions."
+
+    turn_count: mutable number = 0
+        description: "Number of user turns handled by a domain subagent this session. At 12, subagent instructions proactively offer a human hand-off."
+
+    active_domain: mutable string = ""
+        description: "Developer name of the domain subagent most recently entered. Used by each domain subagent's before_reasoning to detect a topic change and reset the per-topic counters above."
+
+    escalation_attempted: mutable boolean = False
+        description: "Whether escalate_to_human has been called at least once for the current escalation. Consumed by the escalation subagent's retry-branch condition."
+
+    escalation_case_created: mutable boolean = False
+        description: "Trusted output of escalateToHuman.isSuccess. Gates escalate_to_human (hides it once True) and hand_off_to_human (shows it once True)."
+
+    escalation_attempts: mutable number = 0
+        description: "Number of escalate_to_human calls made for the current escalation. Caps repeated retries at 3 so a persistently failing Apex call cannot loop indefinitely within one turn."
+
+knowledge:
+    rag_feature_config_id: "ARFPC_1JDaj00000MT7PdGAL"
+    citations_enabled: True
+    citations_url: ""
+
+language:
+    default_locale: "en_US"
+    additional_locales: ""
+    all_additional_locales: False
+
+start_agent agent_router:
+    label: "Ask Nimbus Router"
+    description: "Welcomes the user and classifies the current request into exactly one Nimbus Workspace support domain, the escalation path, or off-topic redirection. Never answers the underlying question itself."
+
+    reasoning:
+        instructions: ->
+            if @variables.escalation_reason_code != "":
+                transition to @subagent.escalation
+
+            | Welcome the user if this is the start of the conversation.
+              Before classifying anything else, check the user's latest
+              message for these deterministic triggers. If any apply, call
+              exactly that trigger action immediately instead of routing to a
+              domain, and do not answer the question in the same turn:
+              - Explicit request for a human, live agent, or real person ->
+                trigger_human_request.
+              - Mentions a suspicious login, account compromise, fraud, or a
+                legal threat -> trigger_security_keyword.
+              - Asks to delete personal data, invokes GDPR, or asks to be
+                forgotten -> trigger_gdpr_request.
+              - Directly asks you to carry out an irreversible account or
+                billing change right now (for example "please cancel it",
+                "go ahead and switch me"), not asking whether it is possible,
+                what the options are, or how to do it themselves ->
+                trigger_transactional_intent.
+              - Requires reading the user's own account, invoice, or usage
+                record, which the knowledge base cannot provide ->
+                trigger_account_specific.
+              Otherwise, classify the request into exactly one of the seven
+              supported domains below and transition there without answering
+              the underlying question. Never give legal advice, medical
+              advice, disparage any competitor, or discuss anything unrelated
+              to Nimbus Workspace — for any of those, or anything matching no
+              supported domain, transition to off_topic instead.
+
+        actions:
+            go_to_billing: @utils.transition to @subagent.billing_subscriptions
+                description: "Billing, invoices, charges, refund policy, subscription plan tiers, upgrades/downgrades between plans, payment methods, proration. Example: 'Why was I charged twice this month?', 'Can I switch from Team to Business plan?'."
+            go_to_account: @utils.transition to @subagent.account_user_management
+                description: "Login and password issues, multi-factor authentication, user provisioning/removal, roles and permissions. Example: 'I can't log in, forgot my password', 'Remove 80 users who left the company'."
+            go_to_workspace: @utils.transition to @subagent.workspace_project_setup
+                description: "Creating and configuring workspaces and projects, templates, folder structure, workspace settings. Example: 'How do I create a project from a template?'."
+            go_to_integrations: @utils.transition to @subagent.integrations_api
+                description: "API usage, authentication, rate limits, error codes, webhooks, third-party integrations. Example: 'Getting 429 errors from your API'."
+            go_to_data_compliance: @utils.transition to @subagent.data_import_export_compliance
+                description: "Importing/exporting data, backups, data retention, and personal-data or GDPR-related requests. Example: 'Please delete all my personal data', 'How do I export my workspace data to CSV?'."
+            go_to_troubleshooting: @utils.transition to @subagent.troubleshooting
+                description: "App crashes, error messages, performance problems, other technical malfunctions in the Nimbus Workspace apps. Example: 'App keeps crashing on iOS'."
+            go_to_security: @utils.transition to @subagent.security_compliance
+                description: "Account security, suspicious login activity, fraud concerns, compliance certifications (SOC 2, GDPR, ISO), trust-center questions. Example: 'I see a login from an unknown location', 'Are you SOC 2 compliant?'."
+            go_to_off_topic: @utils.transition to @subagent.off_topic
+                description: "Anything unrelated to Nimbus Workspace, or requests for legal advice, medical advice, or competitor comparisons, or anything matching none of the seven supported domains."
+            trigger_human_request: @utils.setVariables
+                description: "Call immediately when the user explicitly asks to talk to a human, a live agent, or a real person."
+                set @variables.escalation_reason_code = "human_request"
+                set @variables.pending_queue_hint = "General"
+            trigger_security_keyword: @utils.setVariables
+                description: "Call immediately when the user mentions a suspicious login, account compromise, fraud, or a legal threat."
+                set @variables.escalation_reason_code = "security_keyword"
+                set @variables.pending_queue_hint = "General"
+            trigger_gdpr_request: @utils.setVariables
+                description: "Call immediately when the user asks to delete their personal data, invokes GDPR, or asks to be forgotten."
+                set @variables.escalation_reason_code = "gdpr_request"
+                set @variables.pending_queue_hint = "General"
+            trigger_transactional_intent: @utils.setVariables
+                description: "Call immediately when the user directly asks you to carry out an irreversible account or billing change right now (for example, 'please cancel my plan', 'go ahead and remove these users', 'issue the refund now') — not when they ask whether it is possible, what the options are, or how to do it themselves."
+                set @variables.escalation_reason_code = "transactional_intent"
+                set @variables.pending_queue_hint = "General"
+            trigger_account_specific: @utils.setVariables
+                description: "Call immediately when answering requires reading the user's own account, invoice, or usage record data that the knowledge base cannot provide."
+                set @variables.escalation_reason_code = "account_specific"
+                set @variables.pending_queue_hint = "General"
+
+subagent billing_subscriptions:
+    label: "Billing & Subscriptions"
+    description: "Billing, invoices, charges, refund policy, subscription plan tiers, upgrades/downgrades between plans (for example Team to Business), payment methods, and proration questions. Example requests: 'Why was I charged twice this month?', 'Can I switch from Team to Business plan?', 'What happens to unused seats if I downgrade?'. Not for actually issuing a refund or changing a plan on the user's behalf — only for explaining how billing and plans work."
+
+    before_reasoning:
+        if @variables.active_domain != "billing_subscriptions":
+            set @variables.retrieval_attempts = 0
+            set @variables.unresolved_turns = 0
+            set @variables.clarifying_questions_asked = 0
+        set @variables.active_domain = "billing_subscriptions"
+        set @variables.turn_count = @variables.turn_count + 1
+
+    reasoning:
+        instructions: ->
+            if @variables.escalation_reason_code != "":
+                transition to @subagent.escalation
+
+            if @variables.retrieval_attempts >= 2:
+                set @variables.escalation_reason_code = "no_confident_answer"
+                set @variables.pending_queue_hint = "Billing"
+                transition to @subagent.escalation
+
+            if @variables.unresolved_turns >= 3:
+                set @variables.escalation_reason_code = "unresolved_after_3_turns"
+                set @variables.pending_queue_hint = "Billing"
+                transition to @subagent.escalation
+
+            | Help the customer with billing, invoices, charges, refund
+              policy, and subscription plan questions. You cannot process a
+              refund, change a plan, or modify billing yourself — explain how
+              it works and hand off for anything that requires actually doing
+              it.
+
+            if @variables.turn_count >= 12:
+                | This conversation has been going for a while. Offer to
+                  connect the user with a billing specialist. If they accept,
+                  call trigger_human_request.
+
+            | Before answering anything else, check the user's latest message
+              for these triggers, and if any apply call exactly that trigger
+              action immediately instead of answering:
+              - Explicit request for a human, live agent, or real person ->
+                trigger_human_request.
+              - Suspicious login, account compromise, fraud, or a legal
+                threat -> trigger_security_keyword.
+              - Delete my data, GDPR, or right to be forgotten ->
+                trigger_gdpr_request.
+              - Directly asks you to carry out a refund, cancellation, or
+                plan change right now (for example "please cancel my
+                subscription", "go ahead and switch me to Business") — not
+                asking whether it is possible, what the options are, or how
+                to do it themselves -> trigger_transactional_intent.
+              - Requires reading the user's own invoice, charge history, or
+                account-specific billing data -> trigger_account_specific.
+
+            | If you cannot tell which invoice, billing period, or plan tier
+              the question concerns, or which product if the account may have
+              more than one, ask exactly one clarifying question and call
+              mark_clarifying_question_asked. After 2 clarifying questions
+              without enough information, proceed with your best-effort
+              answer using what you have, or call trigger_account_specific if
+              you genuinely cannot help without the user's own account data.
+
+            | For every substantive question, call AnswerQuestionsWithKnowledge
+              before answering. Answer only using the returned
+              knowledgeSummary. If it is empty, generic, or does not address
+              the question, do not answer from your own knowledge — call
+              mark_retrieval_empty instead of guessing. If your answer
+              requires 4 or more sequential steps the user must perform,
+              present them one step at a time and check in with the user
+              before continuing to the next step; if it has 3 or fewer
+              discrete steps, answer in one consolidated response. If the
+              user says a previous answer did not help, call
+              mark_response_unhelpful before trying again. Cite only sources
+              returned by the action.
+
+        actions:
+            AnswerQuestionsWithKnowledge: @actions.AnswerQuestionsWithKnowledge
+                with query = ...
+                with citationsUrl = ...
+                with ragFeatureConfigId = ...
+                with citationsEnabled = ...
+            mark_retrieval_empty: @utils.setVariables
+                description: "Call immediately after AnswerQuestionsWithKnowledge returns no relevant information, instead of answering from your own knowledge."
+                set @variables.retrieval_attempts = @variables.retrieval_attempts + 1
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_response_unhelpful: @utils.setVariables
+                description: "Call when the user says the previous answer did not help or did not solve their problem."
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_clarifying_question_asked: @utils.setVariables
+                description: "Call immediately after asking the user a clarifying question needed to search the knowledge base."
+                set @variables.clarifying_questions_asked = @variables.clarifying_questions_asked + 1
+            trigger_human_request: @utils.setVariables
+                description: "Call immediately when the user explicitly asks to talk to a human, a live agent, or a real person."
+                set @variables.escalation_reason_code = "human_request"
+                set @variables.pending_queue_hint = "Billing"
+            trigger_security_keyword: @utils.setVariables
+                description: "Call immediately when the user mentions a suspicious login, account compromise, fraud, or a legal threat."
+                set @variables.escalation_reason_code = "security_keyword"
+                set @variables.pending_queue_hint = "Billing"
+            trigger_gdpr_request: @utils.setVariables
+                description: "Call immediately when the user asks to delete their personal data, invokes GDPR, or asks to be forgotten."
+                set @variables.escalation_reason_code = "gdpr_request"
+                set @variables.pending_queue_hint = "Billing"
+            trigger_transactional_intent: @utils.setVariables
+                description: "Call immediately when the user directly asks you to carry out a refund, cancellation, or plan change right now (for example, 'please cancel my subscription', 'go ahead and switch me to Business') — not when they ask whether it is possible, what the options are, or how to do it themselves."
+                set @variables.escalation_reason_code = "transactional_intent"
+                set @variables.pending_queue_hint = "Billing"
+            trigger_account_specific: @utils.setVariables
+                description: "Call immediately when answering requires reading the user's own invoice, charge history, or account-specific billing data that the knowledge base cannot provide."
+                set @variables.escalation_reason_code = "account_specific"
+                set @variables.pending_queue_hint = "Billing"
+
+    actions:
+        AnswerQuestionsWithKnowledge:
+            description: "Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: 'What is your return policy?' or 'How do I fix an issue?'"
+            inputs:
+                query: string
+                    description: "Required. A string created by generative AI to be used in the knowledge article search."
+                    label: "Query"
+                    is_required: True
+                    is_user_input: True
+                citationsUrl: string = @knowledge.citations_url
+                    description: "The URL to use for citations for custom Agents."
+                    label: "Citations Url"
+                    is_required: False
+                    is_user_input: True
+                ragFeatureConfigId: string = @knowledge.rag_feature_config_id
+                    description: "The RAG Feature ID to use for grounding this copilot action invocation."
+                    label: "RAG Feature Configuration Id"
+                    is_required: False
+                    is_user_input: True
+                citationsEnabled: boolean = @knowledge.citations_enabled
+                    description: "Whether or not citations are enabled."
+                    label: "Citations Enabled"
+                    is_required: False
+                    is_user_input: True
+            outputs:
+                knowledgeSummary: object
+                    description: "A string formatted as rich text that includes a summary of the information retrieved from the knowledge articles and citations to those articles."
+                    label: "Knowledge Summary"
+                    complex_data_type_name: "lightning__richTextType"
+                    filter_from_agent: False
+                    is_displayable: True
+                citationSources: object
+                    description: "Source links for the chunks in the hydrated prompt that's used by the planner service."
+                    label: "Citation Sources"
+                    complex_data_type_name: "@apexClassType/AiCopilot__GenAiCitationInput"
+                    filter_from_agent: False
+                    is_displayable: False
+            target: "standardInvocableAction://streamKnowledgeSearch"
+            label: "Answer Questions with Knowledge"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            progress_indicator_message: "Getting answers"
+            source: "EmployeeCopilot__AnswerQuestionsWithKnowledge"
+
+subagent account_user_management:
+    label: "Account & User Management"
+    description: "Login and password issues, multi-factor authentication, user provisioning and deprovisioning, roles and permissions within a Nimbus Workspace account. Example requests: 'I can't log in, forgot my password', 'Remove 80 users who left the company', 'How do I change a teammate's role?'. Not for actually deleting or modifying user records — only for explaining how account and user administration works."
+
+    before_reasoning:
+        if @variables.active_domain != "account_user_management":
+            set @variables.retrieval_attempts = 0
+            set @variables.unresolved_turns = 0
+            set @variables.clarifying_questions_asked = 0
+        set @variables.active_domain = "account_user_management"
+        set @variables.turn_count = @variables.turn_count + 1
+
+    reasoning:
+        instructions: ->
+            if @variables.escalation_reason_code != "":
+                transition to @subagent.escalation
+
+            if @variables.retrieval_attempts >= 2:
+                set @variables.escalation_reason_code = "no_confident_answer"
+                set @variables.pending_queue_hint = "General"
+                transition to @subagent.escalation
+
+            if @variables.unresolved_turns >= 3:
+                set @variables.escalation_reason_code = "unresolved_after_3_turns"
+                set @variables.pending_queue_hint = "General"
+                transition to @subagent.escalation
+
+            | Help the customer with login, password, multi-factor
+              authentication, user provisioning, and role/permission
+              questions. You cannot reset a password, remove a user, or
+              change a role yourself — explain how it works and hand off for
+              anything that requires actually doing it.
+
+            if @variables.turn_count >= 12:
+                | This conversation has been going for a while. Offer to
+                  connect the user with a specialist. If they accept, call
+                  trigger_human_request.
+
+            | Before answering anything else, check the user's latest message
+              for these triggers, and if any apply call exactly that trigger
+              action immediately instead of answering:
+              - Explicit request for a human, live agent, or real person ->
+                trigger_human_request.
+              - Suspicious login, account compromise, fraud, or a legal
+                threat -> trigger_security_keyword.
+              - Delete my data, GDPR, or right to be forgotten ->
+                trigger_gdpr_request.
+              - Directly asks you to remove, add, or modify a user or role
+                right now (for example "please remove these 80 users") — not
+                asking whether it is possible or how to do it themselves ->
+                trigger_transactional_intent.
+              - Requires reading the user's own account or another specific
+                user's account data -> trigger_account_specific.
+
+            | If you cannot tell whether the question is about the user's own
+              login or about administering other users, or which specific
+              user(s) or role is involved, ask exactly one clarifying
+              question and call mark_clarifying_question_asked. After 2
+              clarifying questions without enough information, proceed with
+              your best-effort answer using what you have, or call
+              trigger_account_specific if you genuinely cannot help without
+              the user's own account data.
+
+            | For every substantive question, call AnswerQuestionsWithKnowledge
+              before answering. Answer only using the returned
+              knowledgeSummary. If it is empty, generic, or does not address
+              the question, do not answer from your own knowledge — call
+              mark_retrieval_empty instead of guessing. If your answer
+              requires 4 or more sequential steps the user must perform,
+              present them one step at a time and check in with the user
+              before continuing to the next step; if it has 3 or fewer
+              discrete steps, answer in one consolidated response. If the
+              user says a previous answer did not help, call
+              mark_response_unhelpful before trying again. Cite only sources
+              returned by the action.
+
+        actions:
+            AnswerQuestionsWithKnowledge: @actions.AnswerQuestionsWithKnowledge
+                with query = ...
+                with citationsUrl = ...
+                with ragFeatureConfigId = ...
+                with citationsEnabled = ...
+            mark_retrieval_empty: @utils.setVariables
+                description: "Call immediately after AnswerQuestionsWithKnowledge returns no relevant information, instead of answering from your own knowledge."
+                set @variables.retrieval_attempts = @variables.retrieval_attempts + 1
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_response_unhelpful: @utils.setVariables
+                description: "Call when the user says the previous answer did not help or did not solve their problem."
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_clarifying_question_asked: @utils.setVariables
+                description: "Call immediately after asking the user a clarifying question needed to search the knowledge base."
+                set @variables.clarifying_questions_asked = @variables.clarifying_questions_asked + 1
+            trigger_human_request: @utils.setVariables
+                description: "Call immediately when the user explicitly asks to talk to a human, a live agent, or a real person."
+                set @variables.escalation_reason_code = "human_request"
+                set @variables.pending_queue_hint = "General"
+            trigger_security_keyword: @utils.setVariables
+                description: "Call immediately when the user mentions a suspicious login, account compromise, fraud, or a legal threat."
+                set @variables.escalation_reason_code = "security_keyword"
+                set @variables.pending_queue_hint = "General"
+            trigger_gdpr_request: @utils.setVariables
+                description: "Call immediately when the user asks to delete their personal data, invokes GDPR, or asks to be forgotten."
+                set @variables.escalation_reason_code = "gdpr_request"
+                set @variables.pending_queue_hint = "General"
+            trigger_transactional_intent: @utils.setVariables
+                description: "Call immediately when the user directly asks you to remove, add, or modify a user or role right now (for example, 'please remove these 80 users') — not when they ask whether it is possible or how to do it themselves."
+                set @variables.escalation_reason_code = "transactional_intent"
+                set @variables.pending_queue_hint = "General"
+            trigger_account_specific: @utils.setVariables
+                description: "Call immediately when answering requires reading the user's own account or another specific user's account data that the knowledge base cannot provide."
+                set @variables.escalation_reason_code = "account_specific"
+                set @variables.pending_queue_hint = "General"
+
+    actions:
+        AnswerQuestionsWithKnowledge:
+            description: "Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: 'What is your return policy?' or 'How do I fix an issue?'"
+            inputs:
+                query: string
+                    description: "Required. A string created by generative AI to be used in the knowledge article search."
+                    label: "Query"
+                    is_required: True
+                    is_user_input: True
+                citationsUrl: string = @knowledge.citations_url
+                    description: "The URL to use for citations for custom Agents."
+                    label: "Citations Url"
+                    is_required: False
+                    is_user_input: True
+                ragFeatureConfigId: string = @knowledge.rag_feature_config_id
+                    description: "The RAG Feature ID to use for grounding this copilot action invocation."
+                    label: "RAG Feature Configuration Id"
+                    is_required: False
+                    is_user_input: True
+                citationsEnabled: boolean = @knowledge.citations_enabled
+                    description: "Whether or not citations are enabled."
+                    label: "Citations Enabled"
+                    is_required: False
+                    is_user_input: True
+            outputs:
+                knowledgeSummary: object
+                    description: "A string formatted as rich text that includes a summary of the information retrieved from the knowledge articles and citations to those articles."
+                    label: "Knowledge Summary"
+                    complex_data_type_name: "lightning__richTextType"
+                    filter_from_agent: False
+                    is_displayable: True
+                citationSources: object
+                    description: "Source links for the chunks in the hydrated prompt that's used by the planner service."
+                    label: "Citation Sources"
+                    complex_data_type_name: "@apexClassType/AiCopilot__GenAiCitationInput"
+                    filter_from_agent: False
+                    is_displayable: False
+            target: "standardInvocableAction://streamKnowledgeSearch"
+            label: "Answer Questions with Knowledge"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            progress_indicator_message: "Getting answers"
+            source: "EmployeeCopilot__AnswerQuestionsWithKnowledge"
+
+subagent workspace_project_setup:
+    label: "Workspace & Project Setup"
+    description: "Creating and configuring workspaces and projects, using templates, folder structure, and workspace settings. Example requests: 'How do I create a project from a template?', 'How do I reorganize my workspace folders?', 'Can I set a default template for new projects?'."
+
+    before_reasoning:
+        if @variables.active_domain != "workspace_project_setup":
+            set @variables.retrieval_attempts = 0
+            set @variables.unresolved_turns = 0
+            set @variables.clarifying_questions_asked = 0
+        set @variables.active_domain = "workspace_project_setup"
+        set @variables.turn_count = @variables.turn_count + 1
+
+    reasoning:
+        instructions: ->
+            if @variables.escalation_reason_code != "":
+                transition to @subagent.escalation
+
+            if @variables.retrieval_attempts >= 2:
+                set @variables.escalation_reason_code = "no_confident_answer"
+                set @variables.pending_queue_hint = "General"
+                transition to @subagent.escalation
+
+            if @variables.unresolved_turns >= 3:
+                set @variables.escalation_reason_code = "unresolved_after_3_turns"
+                set @variables.pending_queue_hint = "General"
+                transition to @subagent.escalation
+
+            | Help the customer create and configure workspaces, projects,
+              and templates. You cannot create, modify, or delete a workspace
+              or project yourself — explain how it works and hand off for
+              anything that requires actually doing it.
+
+            if @variables.turn_count >= 12:
+                | This conversation has been going for a while. Offer to
+                  connect the user with a specialist. If they accept, call
+                  trigger_human_request.
+
+            | Before answering anything else, check the user's latest message
+              for these triggers, and if any apply call exactly that trigger
+              action immediately instead of answering:
+              - Explicit request for a human, live agent, or real person ->
+                trigger_human_request.
+              - Suspicious login, account compromise, fraud, or a legal
+                threat -> trigger_security_keyword.
+              - Delete my data, GDPR, or right to be forgotten ->
+                trigger_gdpr_request.
+              - Directly asks you to create, delete, or reconfigure a
+                workspace or project right now — not asking whether it is
+                possible or how to do it themselves ->
+                trigger_transactional_intent.
+              - Requires reading the user's own workspace or project
+                configuration data -> trigger_account_specific.
+
+            | If you cannot tell which workspace or project, or which
+              template or setting, the question concerns, ask exactly one
+              clarifying question and call mark_clarifying_question_asked.
+              After 2 clarifying questions without enough information,
+              proceed with your best-effort answer using what you have, or
+              call trigger_account_specific if you genuinely cannot help
+              without the user's own workspace data.
+
+            | For every substantive question, call AnswerQuestionsWithKnowledge
+              before answering. Answer only using the returned
+              knowledgeSummary. If it is empty, generic, or does not address
+              the question, do not answer from your own knowledge — call
+              mark_retrieval_empty instead of guessing. If your answer
+              requires 4 or more sequential steps the user must perform,
+              present them one step at a time and check in with the user
+              before continuing to the next step; if it has 3 or fewer
+              discrete steps, answer in one consolidated response. If the
+              user says a previous answer did not help, call
+              mark_response_unhelpful before trying again. Cite only sources
+              returned by the action.
+
+        actions:
+            AnswerQuestionsWithKnowledge: @actions.AnswerQuestionsWithKnowledge
+                with query = ...
+                with citationsUrl = ...
+                with ragFeatureConfigId = ...
+                with citationsEnabled = ...
+            mark_retrieval_empty: @utils.setVariables
+                description: "Call immediately after AnswerQuestionsWithKnowledge returns no relevant information, instead of answering from your own knowledge."
+                set @variables.retrieval_attempts = @variables.retrieval_attempts + 1
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_response_unhelpful: @utils.setVariables
+                description: "Call when the user says the previous answer did not help or did not solve their problem."
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_clarifying_question_asked: @utils.setVariables
+                description: "Call immediately after asking the user a clarifying question needed to search the knowledge base."
+                set @variables.clarifying_questions_asked = @variables.clarifying_questions_asked + 1
+            trigger_human_request: @utils.setVariables
+                description: "Call immediately when the user explicitly asks to talk to a human, a live agent, or a real person."
+                set @variables.escalation_reason_code = "human_request"
+                set @variables.pending_queue_hint = "General"
+            trigger_security_keyword: @utils.setVariables
+                description: "Call immediately when the user mentions a suspicious login, account compromise, fraud, or a legal threat."
+                set @variables.escalation_reason_code = "security_keyword"
+                set @variables.pending_queue_hint = "General"
+            trigger_gdpr_request: @utils.setVariables
+                description: "Call immediately when the user asks to delete their personal data, invokes GDPR, or asks to be forgotten."
+                set @variables.escalation_reason_code = "gdpr_request"
+                set @variables.pending_queue_hint = "General"
+            trigger_transactional_intent: @utils.setVariables
+                description: "Call immediately when the user directly asks you to create, delete, or reconfigure a workspace or project right now — not when they ask whether it is possible or how to do it themselves."
+                set @variables.escalation_reason_code = "transactional_intent"
+                set @variables.pending_queue_hint = "General"
+            trigger_account_specific: @utils.setVariables
+                description: "Call immediately when answering requires reading the user's own workspace or project configuration data that the knowledge base cannot provide."
+                set @variables.escalation_reason_code = "account_specific"
+                set @variables.pending_queue_hint = "General"
+
+    actions:
+        AnswerQuestionsWithKnowledge:
+            description: "Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: 'What is your return policy?' or 'How do I fix an issue?'"
+            inputs:
+                query: string
+                    description: "Required. A string created by generative AI to be used in the knowledge article search."
+                    label: "Query"
+                    is_required: True
+                    is_user_input: True
+                citationsUrl: string = @knowledge.citations_url
+                    description: "The URL to use for citations for custom Agents."
+                    label: "Citations Url"
+                    is_required: False
+                    is_user_input: True
+                ragFeatureConfigId: string = @knowledge.rag_feature_config_id
+                    description: "The RAG Feature ID to use for grounding this copilot action invocation."
+                    label: "RAG Feature Configuration Id"
+                    is_required: False
+                    is_user_input: True
+                citationsEnabled: boolean = @knowledge.citations_enabled
+                    description: "Whether or not citations are enabled."
+                    label: "Citations Enabled"
+                    is_required: False
+                    is_user_input: True
+            outputs:
+                knowledgeSummary: object
+                    description: "A string formatted as rich text that includes a summary of the information retrieved from the knowledge articles and citations to those articles."
+                    label: "Knowledge Summary"
+                    complex_data_type_name: "lightning__richTextType"
+                    filter_from_agent: False
+                    is_displayable: True
+                citationSources: object
+                    description: "Source links for the chunks in the hydrated prompt that's used by the planner service."
+                    label: "Citation Sources"
+                    complex_data_type_name: "@apexClassType/AiCopilot__GenAiCitationInput"
+                    filter_from_agent: False
+                    is_displayable: False
+            target: "standardInvocableAction://streamKnowledgeSearch"
+            label: "Answer Questions with Knowledge"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            progress_indicator_message: "Getting answers"
+            source: "EmployeeCopilot__AnswerQuestionsWithKnowledge"
+
+subagent integrations_api:
+    label: "Integrations & API"
+    description: "API usage, authentication, rate limits, error codes, webhooks, and third-party integrations. Example requests: 'Getting 429 errors from your API', 'How do I authenticate API requests?', 'Does Nimbus integrate with Slack?'."
+
+    before_reasoning:
+        if @variables.active_domain != "integrations_api":
+            set @variables.retrieval_attempts = 0
+            set @variables.unresolved_turns = 0
+            set @variables.clarifying_questions_asked = 0
+        set @variables.active_domain = "integrations_api"
+        set @variables.turn_count = @variables.turn_count + 1
+
+    reasoning:
+        instructions: ->
+            if @variables.escalation_reason_code != "":
+                transition to @subagent.escalation
+
+            if @variables.retrieval_attempts >= 2:
+                set @variables.escalation_reason_code = "no_confident_answer"
+                set @variables.pending_queue_hint = "Technical"
+                transition to @subagent.escalation
+
+            if @variables.unresolved_turns >= 3:
+                set @variables.escalation_reason_code = "unresolved_after_3_turns"
+                set @variables.pending_queue_hint = "Technical"
+                transition to @subagent.escalation
+
+            | Help the customer with API usage, authentication, rate limits,
+              error codes, webhooks, and third-party integration questions.
+              You cannot change API keys, rate limits, or integration
+              configuration yourself — explain how it works and hand off for
+              anything that requires actually doing it.
+
+            if @variables.turn_count >= 12:
+                | This conversation has been going for a while. Offer to
+                  connect the user with a technical specialist. If they
+                  accept, call trigger_human_request.
+
+            | Before answering anything else, check the user's latest message
+              for these triggers, and if any apply call exactly that trigger
+              action immediately instead of answering:
+              - Explicit request for a human, live agent, or real person ->
+                trigger_human_request.
+              - Suspicious login, account compromise, fraud, or a legal
+                threat -> trigger_security_keyword.
+              - Delete my data, GDPR, or right to be forgotten ->
+                trigger_gdpr_request.
+              - Directly asks you to raise a rate limit, rotate a key, or
+                change integration configuration right now — not asking
+                whether it is possible or how to do it themselves ->
+                trigger_transactional_intent.
+              - Requires reading the user's own API usage, logs, or
+                integration configuration data -> trigger_account_specific.
+
+            | If you cannot tell which API endpoint, integration, or webhook,
+              and what error code or symptom is occurring, ask exactly one
+              clarifying question and call mark_clarifying_question_asked.
+              After 2 clarifying questions without enough information,
+              proceed with your best-effort answer using what you have, or
+              call trigger_account_specific if you genuinely cannot help
+              without the user's own usage data.
+
+            | For every substantive question, call AnswerQuestionsWithKnowledge
+              before answering. Answer only using the returned
+              knowledgeSummary. If it is empty, generic, or does not address
+              the question, do not answer from your own knowledge — call
+              mark_retrieval_empty instead of guessing. If your answer
+              requires 4 or more sequential steps the user must perform,
+              present them one step at a time and check in with the user
+              before continuing to the next step; if it has 3 or fewer
+              discrete steps, answer in one consolidated response. If the
+              user says a previous answer did not help, call
+              mark_response_unhelpful before trying again. Cite only sources
+              returned by the action.
+
+        actions:
+            AnswerQuestionsWithKnowledge: @actions.AnswerQuestionsWithKnowledge
+                with query = ...
+                with citationsUrl = ...
+                with ragFeatureConfigId = ...
+                with citationsEnabled = ...
+            mark_retrieval_empty: @utils.setVariables
+                description: "Call immediately after AnswerQuestionsWithKnowledge returns no relevant information, instead of answering from your own knowledge."
+                set @variables.retrieval_attempts = @variables.retrieval_attempts + 1
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_response_unhelpful: @utils.setVariables
+                description: "Call when the user says the previous answer did not help or did not solve their problem."
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_clarifying_question_asked: @utils.setVariables
+                description: "Call immediately after asking the user a clarifying question needed to search the knowledge base."
+                set @variables.clarifying_questions_asked = @variables.clarifying_questions_asked + 1
+            trigger_human_request: @utils.setVariables
+                description: "Call immediately when the user explicitly asks to talk to a human, a live agent, or a real person."
+                set @variables.escalation_reason_code = "human_request"
+                set @variables.pending_queue_hint = "Technical"
+            trigger_security_keyword: @utils.setVariables
+                description: "Call immediately when the user mentions a suspicious login, account compromise, fraud, or a legal threat."
+                set @variables.escalation_reason_code = "security_keyword"
+                set @variables.pending_queue_hint = "Technical"
+            trigger_gdpr_request: @utils.setVariables
+                description: "Call immediately when the user asks to delete their personal data, invokes GDPR, or asks to be forgotten."
+                set @variables.escalation_reason_code = "gdpr_request"
+                set @variables.pending_queue_hint = "Technical"
+            trigger_transactional_intent: @utils.setVariables
+                description: "Call immediately when the user directly asks you to raise a rate limit, rotate a key, or change integration configuration right now — not when they ask whether it is possible or how to do it themselves."
+                set @variables.escalation_reason_code = "transactional_intent"
+                set @variables.pending_queue_hint = "Technical"
+            trigger_account_specific: @utils.setVariables
+                description: "Call immediately when answering requires reading the user's own API usage, logs, or integration configuration data that the knowledge base cannot provide."
+                set @variables.escalation_reason_code = "account_specific"
+                set @variables.pending_queue_hint = "Technical"
+
+    actions:
+        AnswerQuestionsWithKnowledge:
+            description: "Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: 'What is your return policy?' or 'How do I fix an issue?'"
+            inputs:
+                query: string
+                    description: "Required. A string created by generative AI to be used in the knowledge article search."
+                    label: "Query"
+                    is_required: True
+                    is_user_input: True
+                citationsUrl: string = @knowledge.citations_url
+                    description: "The URL to use for citations for custom Agents."
+                    label: "Citations Url"
+                    is_required: False
+                    is_user_input: True
+                ragFeatureConfigId: string = @knowledge.rag_feature_config_id
+                    description: "The RAG Feature ID to use for grounding this copilot action invocation."
+                    label: "RAG Feature Configuration Id"
+                    is_required: False
+                    is_user_input: True
+                citationsEnabled: boolean = @knowledge.citations_enabled
+                    description: "Whether or not citations are enabled."
+                    label: "Citations Enabled"
+                    is_required: False
+                    is_user_input: True
+            outputs:
+                knowledgeSummary: object
+                    description: "A string formatted as rich text that includes a summary of the information retrieved from the knowledge articles and citations to those articles."
+                    label: "Knowledge Summary"
+                    complex_data_type_name: "lightning__richTextType"
+                    filter_from_agent: False
+                    is_displayable: True
+                citationSources: object
+                    description: "Source links for the chunks in the hydrated prompt that's used by the planner service."
+                    label: "Citation Sources"
+                    complex_data_type_name: "@apexClassType/AiCopilot__GenAiCitationInput"
+                    filter_from_agent: False
+                    is_displayable: False
+            target: "standardInvocableAction://streamKnowledgeSearch"
+            label: "Answer Questions with Knowledge"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            progress_indicator_message: "Getting answers"
+            source: "EmployeeCopilot__AnswerQuestionsWithKnowledge"
+
+subagent data_import_export_compliance:
+    label: "Data Import/Export & Compliance"
+    description: "Importing and exporting data, backups, data retention, and personal-data or GDPR-related requests. Example requests: 'How do I export my workspace data to CSV?', 'How long do you retain deleted files?', 'Can I bulk-import users from a spreadsheet?'. A request to delete personal data, or any invocation of GDPR or right-to-be-forgotten, is a mandatory escalation trigger, not a question this subagent answers directly."
+
+    before_reasoning:
+        if @variables.active_domain != "data_import_export_compliance":
+            set @variables.retrieval_attempts = 0
+            set @variables.unresolved_turns = 0
+            set @variables.clarifying_questions_asked = 0
+        set @variables.active_domain = "data_import_export_compliance"
+        set @variables.turn_count = @variables.turn_count + 1
+
+    reasoning:
+        instructions: ->
+            if @variables.escalation_reason_code != "":
+                transition to @subagent.escalation
+
+            if @variables.retrieval_attempts >= 2:
+                set @variables.escalation_reason_code = "no_confident_answer"
+                set @variables.pending_queue_hint = "General"
+                transition to @subagent.escalation
+
+            if @variables.unresolved_turns >= 3:
+                set @variables.escalation_reason_code = "unresolved_after_3_turns"
+                set @variables.pending_queue_hint = "General"
+                transition to @subagent.escalation
+
+            | Help the customer with data import/export, backups, and
+              retention policy questions. You cannot import, export, delete,
+              or otherwise act on any data yourself — explain how it works
+              and hand off for anything that requires actually doing it.
+
+            if @variables.turn_count >= 12:
+                | This conversation has been going for a while. Offer to
+                  connect the user with a specialist. If they accept, call
+                  trigger_human_request.
+
+            | Before answering anything else, check the user's latest message
+              for these triggers, and if any apply call exactly that trigger
+              action immediately instead of answering:
+              - Explicit request for a human, live agent, or real person ->
+                trigger_human_request.
+              - Suspicious login, account compromise, fraud, or a legal
+                threat -> trigger_security_keyword.
+              - Any request to delete personal data, invoke GDPR, or be
+                forgotten -> trigger_gdpr_request. This is the most common
+                trigger in this domain — always prefer it over answering a
+                deletion question directly.
+              - Directly asks you to run an import, export, or deletion
+                right now — not asking whether it is possible or how to do
+                it themselves -> trigger_transactional_intent.
+              - Requires reading the user's own stored data or export/import
+                history -> trigger_account_specific.
+
+            | If you cannot tell which data type, format, or time range an
+              import/export or retention question concerns, ask exactly one
+              clarifying question and call mark_clarifying_question_asked.
+              After 2 clarifying questions without enough information,
+              proceed with your best-effort answer using what you have, or
+              call trigger_account_specific if you genuinely cannot help
+              without the user's own data.
+
+            | For every substantive question, call AnswerQuestionsWithKnowledge
+              before answering. Answer only using the returned
+              knowledgeSummary. If it is empty, generic, or does not address
+              the question, do not answer from your own knowledge — call
+              mark_retrieval_empty instead of guessing. If your answer
+              requires 4 or more sequential steps the user must perform,
+              present them one step at a time and check in with the user
+              before continuing to the next step; if it has 3 or fewer
+              discrete steps, answer in one consolidated response. If the
+              user says a previous answer did not help, call
+              mark_response_unhelpful before trying again. Cite only sources
+              returned by the action.
+
+        actions:
+            AnswerQuestionsWithKnowledge: @actions.AnswerQuestionsWithKnowledge
+                with query = ...
+                with citationsUrl = ...
+                with ragFeatureConfigId = ...
+                with citationsEnabled = ...
+            mark_retrieval_empty: @utils.setVariables
+                description: "Call immediately after AnswerQuestionsWithKnowledge returns no relevant information, instead of answering from your own knowledge."
+                set @variables.retrieval_attempts = @variables.retrieval_attempts + 1
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_response_unhelpful: @utils.setVariables
+                description: "Call when the user says the previous answer did not help or did not solve their problem."
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_clarifying_question_asked: @utils.setVariables
+                description: "Call immediately after asking the user a clarifying question needed to search the knowledge base."
+                set @variables.clarifying_questions_asked = @variables.clarifying_questions_asked + 1
+            trigger_human_request: @utils.setVariables
+                description: "Call immediately when the user explicitly asks to talk to a human, a live agent, or a real person."
+                set @variables.escalation_reason_code = "human_request"
+                set @variables.pending_queue_hint = "General"
+            trigger_security_keyword: @utils.setVariables
+                description: "Call immediately when the user mentions a suspicious login, account compromise, fraud, or a legal threat."
+                set @variables.escalation_reason_code = "security_keyword"
+                set @variables.pending_queue_hint = "General"
+            trigger_gdpr_request: @utils.setVariables
+                description: "Call immediately when the user asks to delete their personal data, invokes GDPR, or asks to be forgotten."
+                set @variables.escalation_reason_code = "gdpr_request"
+                set @variables.pending_queue_hint = "General"
+            trigger_transactional_intent: @utils.setVariables
+                description: "Call immediately when the user directly asks you to run a data import, export, or deletion right now — not when they ask whether it is possible or how to do it themselves."
+                set @variables.escalation_reason_code = "transactional_intent"
+                set @variables.pending_queue_hint = "General"
+            trigger_account_specific: @utils.setVariables
+                description: "Call immediately when answering requires reading the user's own stored data or import/export history that the knowledge base cannot provide."
+                set @variables.escalation_reason_code = "account_specific"
+                set @variables.pending_queue_hint = "General"
+
+    actions:
+        AnswerQuestionsWithKnowledge:
+            description: "Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: 'What is your return policy?' or 'How do I fix an issue?'"
+            inputs:
+                query: string
+                    description: "Required. A string created by generative AI to be used in the knowledge article search."
+                    label: "Query"
+                    is_required: True
+                    is_user_input: True
+                citationsUrl: string = @knowledge.citations_url
+                    description: "The URL to use for citations for custom Agents."
+                    label: "Citations Url"
+                    is_required: False
+                    is_user_input: True
+                ragFeatureConfigId: string = @knowledge.rag_feature_config_id
+                    description: "The RAG Feature ID to use for grounding this copilot action invocation."
+                    label: "RAG Feature Configuration Id"
+                    is_required: False
+                    is_user_input: True
+                citationsEnabled: boolean = @knowledge.citations_enabled
+                    description: "Whether or not citations are enabled."
+                    label: "Citations Enabled"
+                    is_required: False
+                    is_user_input: True
+            outputs:
+                knowledgeSummary: object
+                    description: "A string formatted as rich text that includes a summary of the information retrieved from the knowledge articles and citations to those articles."
+                    label: "Knowledge Summary"
+                    complex_data_type_name: "lightning__richTextType"
+                    filter_from_agent: False
+                    is_displayable: True
+                citationSources: object
+                    description: "Source links for the chunks in the hydrated prompt that's used by the planner service."
+                    label: "Citation Sources"
+                    complex_data_type_name: "@apexClassType/AiCopilot__GenAiCitationInput"
+                    filter_from_agent: False
+                    is_displayable: False
+            target: "standardInvocableAction://streamKnowledgeSearch"
+            label: "Answer Questions with Knowledge"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            progress_indicator_message: "Getting answers"
+            source: "EmployeeCopilot__AnswerQuestionsWithKnowledge"
+
+subagent troubleshooting:
+    label: "Troubleshooting"
+    description: "App crashes, error messages, performance problems, and other technical malfunctions in the Nimbus Workspace apps. Example requests: 'App keeps crashing on iOS', 'The desktop app is really slow today', 'I'm getting a blank screen when I open a project'. Not for API error codes (see Integrations & API) or billing charges."
+
+    before_reasoning:
+        if @variables.active_domain != "troubleshooting":
+            set @variables.retrieval_attempts = 0
+            set @variables.unresolved_turns = 0
+            set @variables.clarifying_questions_asked = 0
+        set @variables.active_domain = "troubleshooting"
+        set @variables.turn_count = @variables.turn_count + 1
+
+    reasoning:
+        instructions: ->
+            if @variables.escalation_reason_code != "":
+                transition to @subagent.escalation
+
+            if @variables.retrieval_attempts >= 2:
+                set @variables.escalation_reason_code = "no_confident_answer"
+                set @variables.pending_queue_hint = "Technical"
+                transition to @subagent.escalation
+
+            if @variables.unresolved_turns >= 3:
+                set @variables.escalation_reason_code = "unresolved_after_3_turns"
+                set @variables.pending_queue_hint = "Technical"
+                transition to @subagent.escalation
+
+            | Help the customer troubleshoot app crashes, error messages,
+              and performance problems in the Nimbus Workspace apps. You
+              cannot restart services, apply a fix, or change any
+              configuration yourself — explain the troubleshooting steps and
+              hand off for anything that requires actually doing it.
+
+            if @variables.turn_count >= 12:
+                | This conversation has been going for a while. Offer to
+                  connect the user with a technical specialist. If they
+                  accept, call trigger_human_request.
+
+            | Before answering anything else, check the user's latest message
+              for these triggers, and if any apply call exactly that trigger
+              action immediately instead of answering:
+              - Explicit request for a human, live agent, or real person ->
+                trigger_human_request.
+              - Suspicious login, account compromise, fraud, or a legal
+                threat -> trigger_security_keyword.
+              - Delete my data, GDPR, or right to be forgotten ->
+                trigger_gdpr_request.
+              - Directly asks you to fix, restart, or reconfigure something
+                on their behalf right now — not asking how to do it
+                themselves -> trigger_transactional_intent.
+              - Requires reading the user's own crash logs, device details,
+                or account-specific diagnostic data -> trigger_account_specific.
+
+            | If you cannot tell which operating system or platform (iOS,
+              Android, Windows, macOS, or web) the user is on, ask exactly
+              one clarifying question and call mark_clarifying_question_asked
+              — troubleshooting steps differ by platform. After 2 clarifying
+              questions without enough information, proceed with your
+              best-effort answer using what you have, or call
+              trigger_account_specific if you genuinely cannot help without
+              the user's own diagnostic data.
+
+            | For every substantive question, call AnswerQuestionsWithKnowledge
+              before answering. Answer only using the returned
+              knowledgeSummary. If it is empty, generic, or does not address
+              the question, do not answer from your own knowledge — call
+              mark_retrieval_empty instead of guessing. If your answer
+              requires 4 or more sequential steps the user must perform,
+              present them one step at a time and check in with the user
+              before continuing to the next step; if it has 3 or fewer
+              discrete steps, answer in one consolidated response. If the
+              user says a previous answer did not help, call
+              mark_response_unhelpful before trying again. Cite only sources
+              returned by the action.
+
+        actions:
+            AnswerQuestionsWithKnowledge: @actions.AnswerQuestionsWithKnowledge
+                with query = ...
+                with citationsUrl = ...
+                with ragFeatureConfigId = ...
+                with citationsEnabled = ...
+            mark_retrieval_empty: @utils.setVariables
+                description: "Call immediately after AnswerQuestionsWithKnowledge returns no relevant information, instead of answering from your own knowledge."
+                set @variables.retrieval_attempts = @variables.retrieval_attempts + 1
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_response_unhelpful: @utils.setVariables
+                description: "Call when the user says the previous answer did not help or did not solve their problem."
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_clarifying_question_asked: @utils.setVariables
+                description: "Call immediately after asking the user a clarifying question needed to search the knowledge base."
+                set @variables.clarifying_questions_asked = @variables.clarifying_questions_asked + 1
+            trigger_human_request: @utils.setVariables
+                description: "Call immediately when the user explicitly asks to talk to a human, a live agent, or a real person."
+                set @variables.escalation_reason_code = "human_request"
+                set @variables.pending_queue_hint = "Technical"
+            trigger_security_keyword: @utils.setVariables
+                description: "Call immediately when the user mentions a suspicious login, account compromise, fraud, or a legal threat."
+                set @variables.escalation_reason_code = "security_keyword"
+                set @variables.pending_queue_hint = "Technical"
+            trigger_gdpr_request: @utils.setVariables
+                description: "Call immediately when the user asks to delete their personal data, invokes GDPR, or asks to be forgotten."
+                set @variables.escalation_reason_code = "gdpr_request"
+                set @variables.pending_queue_hint = "Technical"
+            trigger_transactional_intent: @utils.setVariables
+                description: "Call immediately when the user directly asks you to fix, restart, or reconfigure something on their behalf right now — not when they ask how to do it themselves."
+                set @variables.escalation_reason_code = "transactional_intent"
+                set @variables.pending_queue_hint = "Technical"
+            trigger_account_specific: @utils.setVariables
+                description: "Call immediately when answering requires reading the user's own crash logs, device details, or account-specific diagnostic data that the knowledge base cannot provide."
+                set @variables.escalation_reason_code = "account_specific"
+                set @variables.pending_queue_hint = "Technical"
+
+    actions:
+        AnswerQuestionsWithKnowledge:
+            description: "Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: 'What is your return policy?' or 'How do I fix an issue?'"
+            inputs:
+                query: string
+                    description: "Required. A string created by generative AI to be used in the knowledge article search."
+                    label: "Query"
+                    is_required: True
+                    is_user_input: True
+                citationsUrl: string = @knowledge.citations_url
+                    description: "The URL to use for citations for custom Agents."
+                    label: "Citations Url"
+                    is_required: False
+                    is_user_input: True
+                ragFeatureConfigId: string = @knowledge.rag_feature_config_id
+                    description: "The RAG Feature ID to use for grounding this copilot action invocation."
+                    label: "RAG Feature Configuration Id"
+                    is_required: False
+                    is_user_input: True
+                citationsEnabled: boolean = @knowledge.citations_enabled
+                    description: "Whether or not citations are enabled."
+                    label: "Citations Enabled"
+                    is_required: False
+                    is_user_input: True
+            outputs:
+                knowledgeSummary: object
+                    description: "A string formatted as rich text that includes a summary of the information retrieved from the knowledge articles and citations to those articles."
+                    label: "Knowledge Summary"
+                    complex_data_type_name: "lightning__richTextType"
+                    filter_from_agent: False
+                    is_displayable: True
+                citationSources: object
+                    description: "Source links for the chunks in the hydrated prompt that's used by the planner service."
+                    label: "Citation Sources"
+                    complex_data_type_name: "@apexClassType/AiCopilot__GenAiCitationInput"
+                    filter_from_agent: False
+                    is_displayable: False
+            target: "standardInvocableAction://streamKnowledgeSearch"
+            label: "Answer Questions with Knowledge"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            progress_indicator_message: "Getting answers"
+            source: "EmployeeCopilot__AnswerQuestionsWithKnowledge"
+
+subagent security_compliance:
+    label: "Security & Compliance"
+    description: "Account security, suspicious login activity, fraud concerns, compliance certifications (SOC 2, GDPR, ISO), and trust-center questions. Example requests: 'I see a login from an unknown location', 'Are you SOC 2 compliant?', 'What is your data residency policy?'. A suspicious login, account compromise, fraud, or legal threat is a mandatory escalation trigger, not a question this subagent answers directly."
+
+    before_reasoning:
+        if @variables.active_domain != "security_compliance":
+            set @variables.retrieval_attempts = 0
+            set @variables.unresolved_turns = 0
+            set @variables.clarifying_questions_asked = 0
+        set @variables.active_domain = "security_compliance"
+        set @variables.turn_count = @variables.turn_count + 1
+
+    reasoning:
+        instructions: ->
+            if @variables.escalation_reason_code != "":
+                transition to @subagent.escalation
+
+            if @variables.retrieval_attempts >= 2:
+                set @variables.escalation_reason_code = "no_confident_answer"
+                set @variables.pending_queue_hint = "LegalTrust"
+                transition to @subagent.escalation
+
+            if @variables.unresolved_turns >= 3:
+                set @variables.escalation_reason_code = "unresolved_after_3_turns"
+                set @variables.pending_queue_hint = "LegalTrust"
+                transition to @subagent.escalation
+
+            | Help the customer with general security-feature and compliance
+              certification questions (SOC 2, GDPR posture, ISO, data
+              residency, and similar trust-center topics). You cannot
+              investigate or remediate an actual security incident yourself —
+              explain general policy and hand off anything that concerns the
+              user's own account security.
+
+            if @variables.turn_count >= 12:
+                | This conversation has been going for a while. Offer to
+                  connect the user with a specialist. If they accept, call
+                  trigger_human_request.
+
+            | Before answering anything else, check the user's latest message
+              for these triggers, and if any apply call exactly that trigger
+              action immediately instead of answering:
+              - Explicit request for a human, live agent, or real person ->
+                trigger_human_request.
+              - Any mention of a suspicious login, account compromise,
+                fraud, or a legal threat -> trigger_security_keyword. This is
+                the most common trigger in this domain — always prefer it
+                over answering directly whenever the question concerns the
+                user's own account rather than general policy.
+              - Delete my data, GDPR, or right to be forgotten ->
+                trigger_gdpr_request.
+              - Directly asks you to lock an account, reset credentials, or
+                take remediation action right now — not asking whether it is
+                possible or how to do it themselves ->
+                trigger_transactional_intent.
+              - Requires reading the user's own account activity, login
+                history, or security event data -> trigger_account_specific.
+
+            | If you cannot tell which specific security feature,
+              certification, or compliance framework the question concerns,
+              ask exactly one clarifying question and call
+              mark_clarifying_question_asked. After 2 clarifying questions
+              without enough information, proceed with your best-effort
+              answer using what you have, or call trigger_account_specific if
+              you genuinely cannot help without the user's own account data.
+
+            | For every substantive question, call AnswerQuestionsWithKnowledge
+              before answering. Answer only using the returned
+              knowledgeSummary. If it is empty, generic, or does not address
+              the question, do not answer from your own knowledge — call
+              mark_retrieval_empty instead of guessing. If your answer
+              requires 4 or more sequential steps the user must perform,
+              present them one step at a time and check in with the user
+              before continuing to the next step; if it has 3 or fewer
+              discrete steps, answer in one consolidated response. If the
+              user says a previous answer did not help, call
+              mark_response_unhelpful before trying again. Cite only sources
+              returned by the action.
+
+        actions:
+            AnswerQuestionsWithKnowledge: @actions.AnswerQuestionsWithKnowledge
+                with query = ...
+                with citationsUrl = ...
+                with ragFeatureConfigId = ...
+                with citationsEnabled = ...
+            mark_retrieval_empty: @utils.setVariables
+                description: "Call immediately after AnswerQuestionsWithKnowledge returns no relevant information, instead of answering from your own knowledge."
+                set @variables.retrieval_attempts = @variables.retrieval_attempts + 1
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_response_unhelpful: @utils.setVariables
+                description: "Call when the user says the previous answer did not help or did not solve their problem."
+                set @variables.unresolved_turns = @variables.unresolved_turns + 1
+            mark_clarifying_question_asked: @utils.setVariables
+                description: "Call immediately after asking the user a clarifying question needed to search the knowledge base."
+                set @variables.clarifying_questions_asked = @variables.clarifying_questions_asked + 1
+            trigger_human_request: @utils.setVariables
+                description: "Call immediately when the user explicitly asks to talk to a human, a live agent, or a real person."
+                set @variables.escalation_reason_code = "human_request"
+                set @variables.pending_queue_hint = "LegalTrust"
+            trigger_security_keyword: @utils.setVariables
+                description: "Call immediately when the user mentions a suspicious login, account compromise, fraud, or a legal threat concerning their own account."
+                set @variables.escalation_reason_code = "security_keyword"
+                set @variables.pending_queue_hint = "LegalTrust"
+            trigger_gdpr_request: @utils.setVariables
+                description: "Call immediately when the user asks to delete their personal data, invokes GDPR, or asks to be forgotten."
+                set @variables.escalation_reason_code = "gdpr_request"
+                set @variables.pending_queue_hint = "LegalTrust"
+            trigger_transactional_intent: @utils.setVariables
+                description: "Call immediately when the user directly asks you to lock an account, reset credentials, or take remediation action right now — not when they ask whether it is possible or how to do it themselves."
+                set @variables.escalation_reason_code = "transactional_intent"
+                set @variables.pending_queue_hint = "LegalTrust"
+            trigger_account_specific: @utils.setVariables
+                description: "Call immediately when answering requires reading the user's own account activity, login history, or security event data that the knowledge base cannot provide."
+                set @variables.escalation_reason_code = "account_specific"
+                set @variables.pending_queue_hint = "LegalTrust"
+
+    actions:
+        AnswerQuestionsWithKnowledge:
+            description: "Answers questions about company policies, procedures, troubleshooting, or product information by searching knowledge articles. For example: 'What is your return policy?' or 'How do I fix an issue?'"
+            inputs:
+                query: string
+                    description: "Required. A string created by generative AI to be used in the knowledge article search."
+                    label: "Query"
+                    is_required: True
+                    is_user_input: True
+                citationsUrl: string = @knowledge.citations_url
+                    description: "The URL to use for citations for custom Agents."
+                    label: "Citations Url"
+                    is_required: False
+                    is_user_input: True
+                ragFeatureConfigId: string = @knowledge.rag_feature_config_id
+                    description: "The RAG Feature ID to use for grounding this copilot action invocation."
+                    label: "RAG Feature Configuration Id"
+                    is_required: False
+                    is_user_input: True
+                citationsEnabled: boolean = @knowledge.citations_enabled
+                    description: "Whether or not citations are enabled."
+                    label: "Citations Enabled"
+                    is_required: False
+                    is_user_input: True
+            outputs:
+                knowledgeSummary: object
+                    description: "A string formatted as rich text that includes a summary of the information retrieved from the knowledge articles and citations to those articles."
+                    label: "Knowledge Summary"
+                    complex_data_type_name: "lightning__richTextType"
+                    filter_from_agent: False
+                    is_displayable: True
+                citationSources: object
+                    description: "Source links for the chunks in the hydrated prompt that's used by the planner service."
+                    label: "Citation Sources"
+                    complex_data_type_name: "@apexClassType/AiCopilot__GenAiCitationInput"
+                    filter_from_agent: False
+                    is_displayable: False
+            target: "standardInvocableAction://streamKnowledgeSearch"
+            label: "Answer Questions with Knowledge"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            progress_indicator_message: "Getting answers"
+            source: "EmployeeCopilot__AnswerQuestionsWithKnowledge"
+
+subagent off_topic:
+    label: "Off Topic"
+    description: "Politely declines requests unrelated to Nimbus Workspace, or requests for legal advice, medical advice, or competitor disparagement, and redirects to a supported topic."
+
+    reasoning:
+        instructions: ->
+            if @variables.escalation_reason_code != "":
+                transition to @subagent.escalation
+
+            | Explain briefly that you can only help with Nimbus Workspace
+              billing and subscriptions, account and user management,
+              workspace and project setup, integrations and the API, data
+              import/export and compliance, troubleshooting, or security and
+              compliance questions. Do not answer the off-topic request
+              itself, do not give legal or medical advice, and do not
+              disparage any competitor. Ask which of the supported topics the
+              user would like help with.
+
+            | If the user's latest message asks for a human, mentions a
+              security or fraud concern, asks to delete their data, asks you
+              to execute an account or billing change, or requires their own
+              account-specific data, call exactly that matching trigger
+              action immediately instead of redirecting:
+              - trigger_human_request, trigger_security_keyword,
+                trigger_gdpr_request, trigger_transactional_intent,
+                trigger_account_specific.
+
+        actions:
+            go_to_router: @utils.transition to @subagent.agent_router
+                description: "Route to the correct domain once the user asks an in-scope Nimbus Workspace question."
+            trigger_human_request: @utils.setVariables
+                description: "Call immediately when the user explicitly asks to talk to a human, a live agent, or a real person."
+                set @variables.escalation_reason_code = "human_request"
+                set @variables.pending_queue_hint = "General"
+            trigger_security_keyword: @utils.setVariables
+                description: "Call immediately when the user mentions a suspicious login, account compromise, fraud, or a legal threat."
+                set @variables.escalation_reason_code = "security_keyword"
+                set @variables.pending_queue_hint = "General"
+            trigger_gdpr_request: @utils.setVariables
+                description: "Call immediately when the user asks to delete their personal data, invokes GDPR, or asks to be forgotten."
+                set @variables.escalation_reason_code = "gdpr_request"
+                set @variables.pending_queue_hint = "General"
+            trigger_transactional_intent: @utils.setVariables
+                description: "Call immediately when the user directly asks you to carry out an irreversible account or billing change right now — not when they ask whether it is possible, what the options are, or how to do it themselves."
+                set @variables.escalation_reason_code = "transactional_intent"
+                set @variables.pending_queue_hint = "General"
+            trigger_account_specific: @utils.setVariables
+                description: "Call immediately when answering requires reading the user's own account, invoice, or usage record data that the knowledge base cannot provide."
+                set @variables.escalation_reason_code = "account_specific"
+                set @variables.pending_queue_hint = "General"
+
+subagent escalation:
+    label: "Escalation"
+    description: "Creates or updates the Ask Nimbus escalation Case via NimbusEscalationService and hands the conversation off to a human agent. Entered only through a deterministic transition from another subagent when one of the six escalation triggers has fired."
+
+    reasoning:
+        instructions: ->
+            if @variables.escalation_case_created == True:
+                | Tell the user, in plain language, that you're connecting
+                  them with a Nimbus specialist now and that their request
+                  has been logged. Do not ask any further questions and do
+                  not mention any internal record identifiers.
+            else if @variables.escalation_attempts >= 3 and @variables.escalation_case_created == False:
+                | Apologize that the hand-off could not be completed after
+                  several attempts. Do not try again in this conversation.
+                  Let the user know they can reach out again shortly, and
+                  offer to keep helping with any Nimbus Workspace question in
+                  the meantime.
+            else if @variables.escalation_attempted == True and @variables.escalation_case_created == False:
+                | Apologize that the hand-off could not be completed
+                  automatically, and let the user know they can try again now
+                  or continue describing their issue in the meantime. If they
+                  ask to try again, call escalate_to_human once more.
+            else:
+                | Call escalate_to_human now, without asking the user
+                  anything first. Compose intentSummary as a short, one or
+                  two sentence description of what the user was trying to
+                  accomplish this session. Compose transcript as a plain-text
+                  record of the conversation so far, in order. Set
+                  sentimentTrend to your best-effort read of the user's tone
+                  across the conversation — improving, flat, or declining —
+                  using flat if it is unclear. Set articlesServed to the
+                  source record IDs of every Knowledge article citation you
+                  have seen returned so far this session, one per line, or
+                  the literal text "none" if no articles were returned yet.
+                  Never send an empty value for articlesServed.
+
+        actions:
+            escalate_to_human: @actions.escalateToHuman
+                description: "Create or update the Ask Nimbus escalation Case and route it to the correct human queue. Call exactly once per escalation attempt."
+                with sessionId = @variables.session_id
+                with reasonCode = @variables.escalation_reason_code
+                with intentSummary = ...
+                with transcript = ...
+                with sentimentTrend = ...
+                with articlesServed = ...
+                with queueHint = @variables.pending_queue_hint
+                available when @variables.escalation_case_created == False and @variables.escalation_attempts < 3
+                set @variables.escalation_attempted = True
+                set @variables.escalation_attempts = @variables.escalation_attempts + 1
+                set @variables.escalation_case_created = @outputs.isSuccess
+
+            hand_off_to_human: @utils.escalate
+                description: "Complete the live hand-off to a human agent now that the case has been logged."
+                available when @variables.escalation_case_created == True
+
+    actions:
+        escalateToHuman:
+            description: "Creates or updates the one Case for this Ask Nimbus conversation session and routes it to a human queue based on the escalation reason code."
+            target: "apex://NimbusEscalationService"
+            label: "Escalate To Human"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            progress_indicator_message: "Connecting you with a specialist"
+            inputs:
+                sessionId: string
+                    description: "The Ask Nimbus conversation session id. Idempotency key."
+                    label: "Session Id"
+                    is_required: True
+                reasonCode: string
+                    description: "Which deterministic trigger fired: human_request, security_keyword, gdpr_request, transactional_intent, account_specific, unresolved_after_3_turns, or no_confident_answer."
+                    label: "Reason Code"
+                    is_required: True
+                intentSummary: string
+                    description: "Short summary of what the user was trying to accomplish."
+                    label: "Intent Summary"
+                    is_required: True
+                transcript: string
+                    description: "The full conversation transcript so far."
+                    label: "Transcript"
+                    is_required: True
+                sentimentTrend: string
+                    description: "One of: improving, flat, declining."
+                    label: "Sentiment Trend"
+                    is_required: True
+                articlesServed: string
+                    description: "Source-record IDs of every Knowledge article already served this session, one per line. Use the literal text 'none' if no articles were served yet — never an empty string, which the platform's invocable-action layer treats as a missing required value."
+                    label: "Articles Served"
+                    is_required: True
+                queueHint: string
+                    description: "Billing, Technical, or General. Ignored and overridden to LegalTrust when the reason code is security_keyword or gdpr_request."
+                    label: "Queue Hint"
+                    is_required: False
+            outputs:
+                isSuccess: boolean
+                    description: "Whether the Case was created or updated successfully."
+                    label: "Is Success"
+                    filter_from_agent: True
+                caseId: object
+                    description: "Id of the created or updated escalation Case."
+                    label: "Case Id"
+                    complex_data_type_name: "lightning__recordIdType"
+                    filter_from_agent: True
+                errorMessage: string
+                    description: "Error message if the escalation failed."
+                    label: "Error Message"
+                    filter_from_agent: True

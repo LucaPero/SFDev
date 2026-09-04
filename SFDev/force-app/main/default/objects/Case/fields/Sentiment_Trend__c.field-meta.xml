@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>The trend of user sentiment across the Ask Nimbus conversation leading up to escalation, so the receiving human agent knows whether they're picking up a conversation that was getting better or worse.</description>
+    <fullName>Sentiment_Trend__c</fullName>
+    <inlineHelpText>Set automatically by the Ask Nimbus escalation action.</inlineHelpText>
+    <label>Sentiment Trend</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>improving</fullName>
+                <default>false</default>
+                <label>improving</label>
+            </value>
+            <value>
+                <fullName>flat</fullName>
+                <default>false</default>
+                <label>flat</label>
+            </value>
+            <value>
+                <fullName>declining</fullName>
+                <default>false</default>
+                <label>declining</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

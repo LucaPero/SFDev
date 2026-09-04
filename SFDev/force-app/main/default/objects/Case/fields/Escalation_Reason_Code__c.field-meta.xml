@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Which of the eight deterministic Ask Nimbus escalation triggers (Agent Script Appendix B) fired to create this Case: an explicit human request, a security or GDPR keyword match, transactional intent, an account-specific request Knowledge can't answer, the unresolved-turn counter, two consecutive low-confidence retrievals, or a retrieval-infrastructure failure.</description>
+    <fullName>Escalation_Reason_Code__c</fullName>
+    <inlineHelpText>Set automatically by the Ask Nimbus escalation action based on which deterministic trigger fired.</inlineHelpText>
+    <label>Escalation Reason Code</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>human_request</fullName>
+                <default>false</default>
+                <label>human_request</label>
+            </value>
+            <value>
+                <fullName>security_keyword</fullName>
+                <default>false</default>
+                <label>security_keyword</label>
+            </value>
+            <value>
+                <fullName>gdpr_request</fullName>
+                <default>false</default>
+                <label>gdpr_request</label>
+            </value>
+            <value>
+                <fullName>transactional_intent</fullName>
+                <default>false</default>
+                <label>transactional_intent</label>
+            </value>
+            <value>
+                <fullName>account_specific</fullName>
+                <default>false</default>
+                <label>account_specific</label>
+            </value>
+            <value>
+                <fullName>unresolved_after_3_turns</fullName>
+                <default>false</default>
+                <label>unresolved_after_3_turns</label>
+            </value>
+            <value>
+                <fullName>no_confident_answer</fullName>
+                <default>false</default>
+                <label>no_confident_answer</label>
+            </value>
+            <value>
+                <fullName>service_degraded</fullName>
+                <default>false</default>
+                <label>service_degraded</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
