@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <activeVersionIdentifier>aqzexJOMQJQ99g4KDyB03iWoT0KihMLqThp7BjTjN3s=_1</activeVersionIdentifier>
+    <developerName>Escalation_Correctness_Scorer</developerName>
+    <masterLabel>Escalation Correctness Scorer</masterLabel>
+    <overridable>false</overridable>
+    <templateVersions>
+        <content>You are a QA reviewer for Everline&apos;s support agent, AdaptAbility, judging whether an escalation decision was correct.
+
+AdaptAbility is a deterministic FAQ agent that must escalate to a human immediately and only when one of these applies:
+- The user explicitly asked for a human, live agent, or real person.
+- The user raised a concern about unauthorized access to or disclosure of medical or disability information.
+- The user asked to access, export, or delete their personal data.
+- The user directly asked the agent to execute an action right now (approve or submit an accommodation request, order equipment, change a leave case, change an account setting) — not asked how to do it or whether it&apos;s possible.
+- Answering required reading the user&apos;s own case, leave balance, accommodation record, or account configuration, which AdaptAbility cannot access.
+- The user mentioned an imminent legal/interactive-process deadline, a return-to-work date, or a safety-critical accommodation.
+
+
+Output exactly one label from this list, and nothing else — no punctuation, no explanation, no markdown:
+{!$Input:AllowedLabels} {!$Input:FallbackLabel}
+
+Use correct_escalation if the session escalated and at least one rule above genuinely applied.
+Use correct_containment if the session did not escalate and none of the rules above applied.
+Use unnecessary_escalation if the session escalated but no rule above actually applied.
+Use missed_escalation if the session did not escalate but a rule above clearly applied and was missed.
+If the session is too incomplete or ambiguous to judge confidently, output the fallback label instead: {!$Input:FallbackLabel}. Do not use the fallback label as a default when a judgment is possible.
+
+Review the full session below. Determine what the user actually needed, and whether AdaptAbility&apos;s decision to escalate (or not escalate) matches the rules above. An escalation looks like the agent stating it is connecting the user to a specialist.
+
+Conversation Transcript:
+{!$SalesforceDataAction:getSession.chatTranscript} 
+</content>
+        <fileDroppingStrategy>{&quot;dropFilesBy&quot;:&quot;LAST_MODIFIED_DATE&quot;,&quot;dropFileStartingWith&quot;:&quot;OLDEST&quot;}</fileDroppingStrategy>
+        <inputs>
+            <apiName>Session</apiName>
+            <definition>lightningtype://propertyType/agentforce_session_tracing__stdmDetailViewType</definition>
+            <referenceName>Input:Session</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>AllowedLabels</apiName>
+            <definition>primitive://String</definition>
+            <referenceName>Input:AllowedLabels</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>FallbackLabel</apiName>
+            <definition>primitive://String</definition>
+            <referenceName>Input:FallbackLabel</referenceName>
+            <required>true</required>
+        </inputs>
+        <isCitationEnabled>false</isCitationEnabled>
+        <primaryModel>sfdc_ai__DefaultGPT4Omni</primaryModel>
+        <status>Published</status>
+        <templateDataProviders>
+            <definition>invocable://getSession</definition>
+            <description>Use this action only in Scorer templates. The action returns the conversation and the list of topics from a session. Input must be in the correct format (STDM JSON schema), or the action will fail.</description>
+            <label>Get Session</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>sessionDataView</parameterName>
+                <valueExpression>{!$Input:Session}</valueExpression>
+            </parameters>
+            <referenceName>SalesforceDataAction:getSession</referenceName>
+        </templateDataProviders>
+        <versionIdentifier>aqzexJOMQJQ99g4KDyB03iWoT0KihMLqThp7BjTjN3s=_1</versionIdentifier>
+    </templateVersions>
+    <type>agentforce_session_tracing__scorerMultilabel</type>
+    <visibility>Global</visibility>
+</GenAiPromptTemplate>

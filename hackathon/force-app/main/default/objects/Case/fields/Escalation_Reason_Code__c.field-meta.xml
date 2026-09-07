@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Which of the nine deterministic AdaptAbility escalation triggers fired to create this Case: an explicit human request, a privacy concern or data privacy request, an action the agent can't execute itself, a request needing the employee's own case data, the unresolved-turn counter, two consecutive low-confidence retrievals, a retrieval-infrastructure failure, or an urgent deadline/safety-critical accommodation.</description>
+    <fullName>Escalation_Reason_Code__c</fullName>
+    <inlineHelpText>Set automatically by the AdaptAbility escalation action based on which deterministic trigger fired.</inlineHelpText>
+    <label>Escalation Reason Code</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>human_request</fullName>
+                <default>false</default>
+                <label>human_request</label>
+            </value>
+            <value>
+                <fullName>privacy_concern</fullName>
+                <default>false</default>
+                <label>privacy_concern</label>
+            </value>
+            <value>
+                <fullName>data_privacy_request</fullName>
+                <default>false</default>
+                <label>data_privacy_request</label>
+            </value>
+            <value>
+                <fullName>action_required</fullName>
+                <default>false</default>
+                <label>action_required</label>
+            </value>
+            <value>
+                <fullName>employee_specific_case_data</fullName>
+                <default>false</default>
+                <label>employee_specific_case_data</label>
+            </value>
+            <value>
+                <fullName>unresolved_after_3_turns</fullName>
+                <default>false</default>
+                <label>unresolved_after_3_turns</label>
+            </value>
+            <value>
+                <fullName>no_confident_answer</fullName>
+                <default>false</default>
+                <label>no_confident_answer</label>
+            </value>
+            <value>
+                <fullName>service_degraded</fullName>
+                <default>false</default>
+                <label>service_degraded</label>
+            </value>
+            <value>
+                <fullName>urgent_deadline_or_safety</fullName>
+                <default>false</default>
+                <label>urgent_deadline_or_safety</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

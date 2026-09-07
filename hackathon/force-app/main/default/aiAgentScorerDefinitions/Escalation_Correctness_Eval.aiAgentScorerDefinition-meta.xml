@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AiAgentScorerDefinition xmlns="http://soap.sforce.com/2006/04/metadata">
+    <dataType>Text</dataType>
+    <inputScope>Session</inputScope>
+    <scorerType>Predefined</scorerType>
+    <scorerVersion>
+        <agentAssociation>
+            <agentApiName>AdaptAbility</agentApiName>
+            <inputScope>Session</inputScope>
+            <isActive>true</isActive>
+            <samplingRate>1.0</samplingRate>
+        </agentAssociation>
+        <description>Judges whether AdaptAbility's decision to escalate (or not escalate) a session was actually correct, per its own deterministic trigger rules (explicit human request, privacy concern or data privacy request, action required, employee/customer-specific case data, or an urgent deadline/safety-critical accommodation). Returns one of five text labels (correct_escalation, correct_containment, unnecessary_escalation, missed_escalation, unclear) as the recorded judgment text, using a single NotApplicable placeholder outcome mapping (the same pattern as Answer_Quality_Multi_Dim_Eval) so the platform does not rebind the engine to its own built-in deflection_defence template.</description>
+        <engine>
+            <engineRef>Escalation_Correctness_Scorer</engineRef>
+            <engineType>PromptTemplate</engineType>
+        </engine>
+        <label>Escalation Correctness Eval</label>
+        <outputEnumValue>
+            <isFallback>true</isFallback>
+            <isSystemFallback>false</isSystemFallback>
+            <outcomeType>NotApplicable</outcomeType>
+            <value>Evaluated</value>
+        </outputEnumValue>
+        <status>Available</status>
+        <versionNumber>1</versionNumber>
+    </scorerVersion>
+    <semanticType>Dimension</semanticType>
+</AiAgentScorerDefinition>

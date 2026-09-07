@@ -1,0 +1,21 @@
+# Salesforce CLI
+.sfdx/
+.sf/
+.localdevserver/
+deploy-options.json
+*.log
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+
+.agents/
+.claude/
+.tmp_org_check/

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Developer name of the AdaptAbility queue (AdaptAbility_Accommodations/AdaptAbility_CustomerAccess/AdaptAbility_General/AdaptAbility_PrivacyLegal) that this escalation's reason code resolved to. The Case itself stays owned by the non-routed AdaptAbility_Case_Records holding queue (background record only); the live-chat outbound routing flow reads this field to decide which of the 4 real Omni-Channel queues to push the conversation to, so the chat lands in the same track/domain queue the Case's reason code implies without the Case itself being pushed.</description>
+    <fullName>Resolved_Queue_Name__c</fullName>
+    <inlineHelpText>Set automatically by the AdaptAbility escalation action.</inlineHelpText>
+    <label>Resolved Queue Name</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

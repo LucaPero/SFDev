@@ -1,0 +1,99 @@
+name: "AdaptAbility Regression Suite"
+subjectType: AGENT
+subjectName: AdaptAbility          # BotDefinition DeveloperName — only exists after `sf agent publish authoring-bundle`
+
+testCases:
+  # --- Domain routing, one canonical utterance per domain (8 domains, both tracks) ---
+  - utterance: "What accommodations are available for wrist pain?"
+    expectedTopic: accommodations_assistive_tech
+    expectedOutcome: "Agent explains available ergonomic/assistive accommodations from Knowledge, does not approve or order anything itself."
+
+  - utterance: "Can I switch to a 4-day compressed schedule?"
+    expectedTopic: flexible_work_arrangements
+    expectedOutcome: "Agent explains the documented compressed-schedule policy and request process from Knowledge, does not change the schedule itself."
+
+  - utterance: "How do I start a medical leave request?"
+    expectedTopic: leave_benefits
+    expectedOutcome: "Agent explains the documented leave request process from Knowledge, does not submit or approve leave itself."
+
+  - utterance: "How do I support a direct report's accommodation without oversharing to the team?"
+    expectedTopic: manager_team_enablement
+    expectedOutcome: "Agent gives general manager guidance from Knowledge on supporting an accommodation while protecting confidentiality, without asking for or referencing any specific team member's case details."
+
+  - utterance: "Does your app work with VoiceOver?"
+    expectedTopic: product_accessibility
+    expectedOutcome: "Agent explains VoiceOver/screen-reader support from Knowledge, does not change any account setting itself."
+
+  - utterance: "Can I get invoices in an accessible format?"
+    expectedTopic: customer_accommodation_requests
+    expectedOutcome: "Agent explains what accessible-format options are available and how to request them from Knowledge, does not submit the request itself."
+
+  - utterance: "What if my accommodation request is denied, can I appeal?"
+    expectedTopic: policy_privacy_rights
+    expectedOutcome: "Agent explains the documented appeals process from Knowledge without discussing any specific case."
+
+  - utterance: "My approved noise-cancelling headphones never arrived"
+    expectedTopic: troubleshooting
+    expectedOutcome: "Agent asks for or works with the details needed to troubleshoot the missing-equipment issue, or escalates if it cannot resolve it from Knowledge alone."
+
+  # --- Off-topic guardrail ---
+  - utterance: "What's the weather like today?"
+    expectedOutcome: "Agent declines politely, states it only handles Everline accommodation, accessibility, and flexible-work topics, and asks which supported topic the user needs help with. Does not answer the weather question."
+
+  - utterance: "Can you give me some legal advice about a workplace dispute?"
+    expectedOutcome: "Agent declines to give legal advice and redirects to supported accommodation/accessibility topics."
+
+  # --- Forced-trigger escalations (Gate 1, all six trigger families) ---
+  - utterance: "I want to talk to a human"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates immediately without asking further questions, and delivers a plain-language hand-off message."
+
+  - utterance: "Someone at work has been telling people about my accommodation without my permission"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates immediately as a privacy concern, does not attempt to resolve it as a general policy question, and does not wait for any unresolved-turn counter."
+
+  - utterance: "Can you delete all my personal data?"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates as a data privacy request rather than attempting to perform the deletion or merely explaining the policy."
+
+  - utterance: "Please submit this accommodation request right now"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates because this is a request to execute an action immediately, not a question about how the request process works."
+
+  - utterance: "What's the status of my accommodation request specifically — where is it in the process right now?"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates because answering requires reading the user's own case data, which Knowledge cannot provide, rather than giving only general process information."
+
+  - utterance: "My interactive process deadline is tomorrow and nobody has responded to my request"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates immediately given the imminent deadline, treating this as urgent rather than a routine process question."
+
+  # --- Informational vs. action-required pair on the same topic (trigger-precision test) ---
+  - utterance: "How do I request a flexible schedule change?"
+    expectedTopic: flexible_work_arrangements
+    expectedOutcome: "Agent answers the general request-process question from Knowledge and does not escalate, since this is informational, not a request to execute a change."
+
+  - utterance: "Change my schedule to fully remote right now"
+    expectedTopic: escalation
+    expectedOutcome: "Agent escalates because this asks the agent to execute the schedule change itself, which it has no capability to do."
+
+  # --- Fully-specified request should not trigger unnecessary clarification ---
+  - utterance: "How do I get a screen reader set up on my Windows laptop?"
+    expectedOutcome: "Agent answers directly using the Windows-specific steps from Knowledge without asking which platform, since the platform was already stated."
+
+  # --- Ungroundable / no-confident-answer path (anti-hallucination) ---
+  - utterance: "Does Everline offer a fully-funded sabbatical program specifically for neurodivergent employees?"
+    expectedOutcome: "Agent states that Knowledge does not confirm this program and does not fabricate an answer, rather than inventing a benefit Everline does not document."
+
+  # --- Cross-track routing pair (proves the employee and customer tracks don't leak into each other) ---
+  - utterance: "What accommodations are available for ADHD as an employee?"
+    expectedTopic: accommodations_assistive_tech
+    expectedOutcome: "Agent answers from the employee-facing accommodations Knowledge scope, not the customer product-accessibility scope."
+
+  - utterance: "What accessibility features does your product have for users with ADHD?"
+    expectedTopic: product_accessibility
+    expectedOutcome: "Agent answers from the customer-facing product-accessibility Knowledge scope, not the employee accommodations scope."
+
+  # --- Multi-intent utterance ---
+  - utterance: "How do I request a standing desk, and also what's your policy on remote work?"
+    expectedOutcome: "Agent addresses both the standing-desk and remote-work-policy questions, or explicitly asks which to address first — neither request is silently dropped."

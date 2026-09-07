@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Source-record IDs of every Knowledge__kav article already served to the user during the AdaptAbility conversation, so the receiving human agent knows what the user has already been told and doesn't repeat it.</description>
+    <fullName>Knowledge_Articles_Served__c</fullName>
+    <inlineHelpText>Set automatically by the AdaptAbility escalation action. One article ID per line.</inlineHelpText>
+    <label>Knowledge Articles Served</label>
+    <length>32000</length>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

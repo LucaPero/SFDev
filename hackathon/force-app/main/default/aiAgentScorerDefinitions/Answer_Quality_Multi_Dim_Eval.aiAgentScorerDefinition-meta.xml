@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AiAgentScorerDefinition xmlns="http://soap.sforce.com/2006/04/metadata">
+    <dataType>Text</dataType>
+    <inputScope>Session</inputScope>
+    <scorerType>Predefined</scorerType>
+    <scorerVersion>
+        <agentAssociation>
+            <agentApiName>AdaptAbility</agentApiName>
+            <inputScope>Session</inputScope>
+            <isActive>true</isActive>
+            <samplingRate>1.0</samplingRate>
+        </agentAssociation>
+        <description>Returns a structured JSON evaluation of the answer-quality and grounding experience for a non-escalation AdaptAbility session, covering five dimensions: routing accuracy, retrieval relevance, hallucination risk, off-topic guardrail handling, and an overall experience summary sentence.</description>
+        <engine>
+            <engineRef>Answer_Quality_Multi_Dimensions_Eval_Scorer</engineRef>
+            <engineType>PromptTemplate</engineType>
+        </engine>
+        <label>Answer Quality Multi Dimensions Eval Scorer</label>
+        <outputEnumValue>
+            <isFallback>true</isFallback>
+            <isSystemFallback>false</isSystemFallback>
+            <outcomeType>NotApplicable</outcomeType>
+            <value>Evaluated</value>
+        </outputEnumValue>
+        <status>Available</status>
+        <versionNumber>1</versionNumber>
+    </scorerVersion>
+    <semanticType>Dimension</semanticType>
+</AiAgentScorerDefinition>
