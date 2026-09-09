@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>67.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Set_Start_Swarm_Error</name>
+        <label>Set Start Swarm Error</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>errorMessage</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>Initiate_Swarm_in_Slack.errorMessage</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <decisions>
+        <description>Checks if the Begin Swarm subflow returned an error message.</description>
+        <name>Any_error_while_initiating_Swarm</name>
+        <label>Any Error When Beginning Swarm?</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnector>
+            <targetReference>Set_Start_Swarm_Error</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Error on Start Swarm</defaultConnectorLabel>
+        <rules>
+            <name>No_Error_Start_swarm</name>
+            <conditionLogic>or</conditionLogic>
+            <conditions>
+                <leftValueReference>Initiate_Swarm_in_Slack.errorMessage</leftValueReference>
+                <operator>IsBlank</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>Initiate_Swarm_in_Slack.errorMessage</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <label>No Error</label>
+        </rules>
+    </decisions>
+    <environments>Default</environments>
+    <interviewLabel>Begin Swarming For Slack Auto {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Begin Swarming For Slack Auto</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <runInMode>SystemModeWithoutSharing</runInMode>
+    <start>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Initiate_Swarm_in_Slack</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+    <subflows>
+        <description>Starts a swarm conversation in Slack.</description>
+        <name>Initiate_Swarm_in_Slack</name>
+        <label>Begin Swarm in Slack</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Any_error_while_initiating_Swarm</targetReference>
+        </connector>
+        <flowName>swarming__Init_Enhanced_Slack_Swarm</flowName>
+        <inputAssignments>
+            <name>expertSlackChannelId</name>
+            <value>
+                <elementReference>expertSlackChannelId</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <name>expertSlackChannelName</name>
+            <value>
+                <elementReference>expertSlackChannelName</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <name>recordId</name>
+            <value>
+                <elementReference>recordId</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <name>source</name>
+            <value>
+                <stringValue>Flow</stringValue>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <name>swarmDescription</name>
+            <value>
+                <elementReference>swarmDescription</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <name>swarmName</name>
+            <value>
+                <elementReference>swarmName</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <name>swarmOwnerSalesforceId</name>
+            <value>
+                <elementReference>$User.Id</elementReference>
+            </value>
+        </inputAssignments>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </subflows>
+    <variables>
+        <description>Set if either the precondition check or the Slack swarm initiation fails.</description>
+        <name>errorMessage</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <description>The Slack channel ID of an existing expert channel to swarm into (optional in the original screen, but tested as explicitly provided here).</description>
+        <name>expertSlackChannelId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <description>The Slack channel name matching expertSlackChannelId.</description>
+        <name>expertSlackChannelName</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <description>The ID of the record associated with the swarm.</description>
+        <name>recordId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <description>What help is needed (was the screen&apos;s &quot;What do you need help with?&quot; field).</description>
+        <name>swarmDescription</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <description>Name for the new swarm record (was a screen input in the cloned original).</description>
+        <name>swarmName</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+</Flow>

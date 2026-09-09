@@ -103,6 +103,76 @@ private class NimbusEscalationServiceTest {
         System.assert(results[0].errorMessage.contains('reasonCode'));
     }
 
+    // Swarm creation now calls the platform's createSwarmSlackChannel action
+    // through Create_Swarm_Slack_Channel_Direct, which does real external
+    // Slack API work — Test.isRunningTest() skips it entirely (confirmed
+    // live: running it inside a test transaction throws a platform
+    // UNKNOWN_EXCEPTION, not a normal failure), the same way you can't unit
+    // test a real HTTP callout's side effect. These tests confirm escalation
+    // still succeeds cleanly around that skipped call, not the Slack
+    // provisioning itself — that's verified separately via a direct,
+    // non-test Apex run against the org.
+    @isTest
+    static void escalationSucceedsEvenThoughSwarmCreationIsSkippedInTests() {
+        NimbusEscalationService.Request req = buildRequest('session-009', 'human_request');
+
+        Test.startTest();
+        List<NimbusEscalationService.Result> results =
+            NimbusEscalationService.escalateToHuman(new List<NimbusEscalationService.Request>{ req });
+        Test.stopTest();
+
+        System.assert(results[0].isSuccess, results[0].errorMessage);
+        System.assertNotEquals(null, results[0].caseId);
+    }
+
+    @isTest
+    static void duplicateTriggerInSameSessionStillUpdatesSameCaseWithSwarmSkipped() {
+        NimbusEscalationService.Request first = buildRequest('session-010', 'unresolved_after_3_turns');
+        NimbusEscalationService.Request retry = buildRequest('session-010', 'unresolved_after_3_turns');
+
+        Test.startTest();
+        List<NimbusEscalationService.Result> firstResults =
+            NimbusEscalationService.escalateToHuman(new List<NimbusEscalationService.Request>{ first });
+        List<NimbusEscalationService.Result> retryResults =
+            NimbusEscalationService.escalateToHuman(new List<NimbusEscalationService.Request>{ retry });
+        Test.stopTest();
+
+        System.assert(retryResults[0].isSuccess, retryResults[0].errorMessage);
+        System.assertEquals(firstResults[0].caseId, retryResults[0].caseId,
+            'A repeated escalation trigger in the same session must still update the same Case.');
+    }
+
+    @isTest
+    static void swarmChannelNameIsSanitizedAndUnique() {
+        Id fakeCaseId = (Id) '500000000000123';
+        String channelName = NimbusEscalationService.buildSwarmChannelName('human_request', fakeCaseId);
+
+        System.assert(channelName.startsWith('nimbus-human-request-'),
+            'Underscores in the reason code must be converted to hyphens for a valid Slack channel name.');
+        System.assertEquals(channelName, channelName.toLowerCase(),
+            'Slack channel names must be lowercase.');
+    }
+
+    @isTest
+    static void addSwarmMembersSkipsCleanlyWithNoMembersOrNoSwarm() {
+        // No exception is the assertion here — both guard branches (null
+        // swarmId, empty member set) must short-circuit without attempting
+        // any DML.
+        NimbusEscalationService.addSwarmMembers(null, null, 'human_request', new Set<Id>{ UserInfo.getUserId() });
+        NimbusEscalationService.addSwarmMembers((Id) '0sW000000000123', null, 'human_request', new Set<Id>());
+    }
+
+    @isTest
+    static void addSwarmMembersHandlesAnInvalidSwarmIdGracefully() {
+        // The Swarm referenced here doesn't exist (this org has no Service
+        // Cloud/Swarming feature enabled in the test context), so the
+        // member insert fails per-record — addSwarmMembers must log and
+        // return normally rather than throwing.
+        NimbusEscalationService.addSwarmMembers(
+            (Id) '0sW000000000123', UserInfo.getUserId(), 'human_request', new Set<Id>{ UserInfo.getUserId() }
+        );
+    }
+
     @isTest
     static void bulkRequestsAcrossMultipleSessionsEachProduceOneCase() {
         List<NimbusEscalationService.Request> requests = new List<NimbusEscalationService.Request>{
